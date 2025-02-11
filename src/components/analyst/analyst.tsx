@@ -1,17 +1,23 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { CompanySelection } from "./company-selection"
+import { useCompletion } from "ai/react";
 
 export function Analyst() {
     const [stage, setStage] = useState<"selection" | "assumptions" | "model">("selection")
-    const [selectedCompany, setSelectedCompany] = useState<string>();
-    useEffect(() => {
-        if (selectedCompany && stage === "selection") {
-            setStage("assumptions")
+    const { completion, complete } = useCompletion({
+        api: '/api/analyst/gen-params-text',
+    });
 
-        }
-    }, [selectedCompany, stage])
+
+    if (completion) {
+        return <div className="p-4">
+            {completion}
+        </div>
+    }
+
+
 
     if (stage === "assumptions") {
         return <div className="flex flex-col min-w-0 h-dvh bg-background">
@@ -36,12 +42,9 @@ export function Analyst() {
         return <div className="flex flex-col min-w-0 h-dvh bg-background">
             <div className="flex-1 flex justify-center items-center">
                 <div>
-
-
                     <div className="text-2xl font-bold">YOUR MODEL HERE</div>
                     <div onClick={() => {
-                        setStage("selection");
-                        setSelectedCompany(undefined);
+                        setStage("selection")
                     }}>Reset</div>
                 </div>
             </div>
@@ -53,7 +56,9 @@ export function Analyst() {
     return <div className="flex flex-col min-w-0 h-dvh bg-background">
         <div className="flex-1 flex justify-center items-center">
 
-            <CompanySelection setSelectedCompany={setSelectedCompany} />
+            <CompanySelection setSelectedCompany={async (value) => {
+                await complete(value);
+            }} />
         </div>
     </div>
 

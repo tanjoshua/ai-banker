@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { streamObject } from 'ai';
+import { generateObject, } from 'ai';
 import { defaultChatModel } from '@/lib/ai/models';
 
 export const parameterSchema = z.object({
@@ -19,12 +19,22 @@ export interface GenParamsPayload {
 export async function POST(req: Request) {
     const payload: GenParamsPayload = await req.json();
 
-    const result = streamObject({
+    const result = await generateObject({
         model: defaultChatModel,
         schema: parameterSchema,
         prompt:
             `Generate financial parameters for a discounted cash flow model of the stock: ` + payload.stock,
     });
+    console.log('params result', result)
 
-    return result.toTextStreamResponse();
+    return result.toJsonResponse();
+
+    // const result = streamObject({
+    //     model: defaultChatModel,
+    //     schema: parameterSchema,
+    //     prompt:
+    //         `Generate financial parameters for a discounted cash flow model of the stock: ` + payload.stock,
+    // });
+
+    // return result.toTextStreamResponse();
 }
