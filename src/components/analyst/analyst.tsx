@@ -2,36 +2,53 @@
 
 import { parameterSchema } from "@/app/(main)/api/analyst/gen-params/route";
 import { CompanySelection } from "./company-selection"
-import { experimental_useObject } from "ai/react"
+import { experimental_useObject } from "@ai-sdk/react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
+import { ScrollArea } from "../ui/scroll-area";
+import { useState } from "react";
 
 export function Analyst() {
-    const { object, submit } = experimental_useObject(
+    const [selectedCompany, setSelectedCompany] = useState("")
+    const { object, submit, isLoading } = experimental_useObject(
         {
             api: 'api/analyst/gen-params',
             schema: parameterSchema,
         }
     );
 
-    if (object) {
-        return <div className="p-4">
-            <div className="font-bold text-2xl mb-4">Parameters</div>
-            <div className="grid gap-4">
-                {
-                    object?.parameters?.map((param, index) => <Card key={index}>
-                        <CardHeader>
-                            <CardTitle>
-                                {param?.name}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>{param?.value}</p>
-                            <p>{param?.reasoning}</p>
-                        </CardContent>
-                    </Card>)
-                }
-            </div>
-        </div>
+    if (selectedCompany) {
+        return <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel>
+                <ScrollArea className="h-dvh">
+                    <div className="p-6">
+                        <div className="font-bold text-xl mb-4">{selectedCompany}</div>
+
+                        <div className="grid gap-4">
+                            {
+                                object?.parameters?.map((param, index) => <Card key={index}>
+                                    <CardHeader>
+                                        <CardTitle>
+                                            {param?.name}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p>{param?.value}</p>
+                                        <p>{param?.reasoning}</p>
+                                    </CardContent>
+                                </Card>)
+                            }
+                        </div>
+                    </div>
+                </ScrollArea>
+
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel>
+
+            </ResizablePanel>
+
+        </ResizablePanelGroup>
     }
 
 
@@ -39,6 +56,7 @@ export function Analyst() {
     return <div className="flex flex-col min-w-0 h-dvh bg-background">
         <div className="flex-1 flex justify-center items-center">
             <CompanySelection setSelectedCompany={async (value) => {
+                setSelectedCompany(value)
                 submit({ stock: value });
             }} />
 
