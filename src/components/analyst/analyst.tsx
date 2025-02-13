@@ -6,7 +6,8 @@ import { experimental_useObject } from "@ai-sdk/react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 import { ScrollArea } from "../ui/scroll-area";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { Skeleton } from "../ui/skeleton";
 
 export function Analyst() {
     const [selectedCompany, setSelectedCompany] = useState("")
@@ -25,6 +26,14 @@ export function Analyst() {
                         <div className="font-bold text-xl mb-4">{selectedCompany}</div>
 
                         <div className="grid gap-4">
+                            {isLoading && !object &&
+                                <Fragment>
+                                    <Skeleton className="rounded-xl h-32" />
+                                    <Skeleton className="rounded-xl h-32" />
+                                    <Skeleton className="rounded-xl h-32" />
+
+                                </Fragment>
+                            }
                             {
                                 object?.parameters?.map((param, index) => <Card key={index}>
                                     <CardHeader>
