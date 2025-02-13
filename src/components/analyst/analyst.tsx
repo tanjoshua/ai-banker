@@ -8,6 +8,8 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resi
 import { ScrollArea } from "../ui/scroll-area";
 import { Fragment, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
+import { Button } from "../ui/button";
+import { RefreshCw } from "lucide-react";
 
 export function Analyst() {
     const [selectedCompany, setSelectedCompany] = useState("")
@@ -23,7 +25,14 @@ export function Analyst() {
             <ResizablePanel>
                 <ScrollArea className="h-dvh">
                     <div className="p-6">
-                        <div className="font-bold text-xl mb-4">{selectedCompany}</div>
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="font-bold text-xl ">
+                                {selectedCompany}
+                            </div>
+                            <Button variant="outline" size="icon" onClick={() => setSelectedCompany("")}>
+                                <RefreshCw />
+                            </Button>
+                        </div>
 
                         <div className="grid gap-4">
                             {isLoading && !object &&
