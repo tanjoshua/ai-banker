@@ -6,10 +6,10 @@ import { experimental_useObject } from "@ai-sdk/react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
 import { Button } from "../ui/button";
-import { RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { CellFormat, DCF, DCFRow, } from "./dcf";
 
 function defaultDCFData(): DCFRow[] {
@@ -37,8 +37,14 @@ export function Analyst() {
             schema: parameterSchema,
         }
     );
+    const [DCFData, setDCFData] = useState<DCFRow[]>()
 
-    const [DCFData, setDCFData] = useState<DCFRow[]>(defaultDCFData())
+    useEffect(() => {
+        if (object && !isLoading) {
+            // loading complete
+            setDCFData(defaultDCFData())
+        }
+    }, [object, isLoading])
 
     if (selectedCompany) {
         return <ResizablePanelGroup direction="horizontal">
@@ -84,8 +90,17 @@ export function Analyst() {
             <ResizableHandle />
             <ResizablePanel>
                 <ScrollArea className="h-dvh p-4">
-                    <DCF data={DCFData} year={2024} />
-                    <ScrollBar orientation="horizontal" />
+                    {!DCFData ? (
+                        <div className="h-dvh flex justify-center items-center">
+
+                            <Loader2 className="animate-spin text-muted-foreground" />
+                        </div>
+                    ) : (
+                        <>
+                            <DCF data={DCFData} year={2024} />
+                            <ScrollBar orientation="horizontal" />
+                        </>
+                    )}
                 </ScrollArea>
             </ResizablePanel>
 
