@@ -49,7 +49,7 @@ export function Analyst() {
 
     if (selectedCompany) {
         return <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel>
+            <ResizablePanel defaultSize={40}>
                 <ScrollArea className="h-dvh">
                     <div className="p-6">
                         <div className="flex items-center gap-4 mb-4">
@@ -89,7 +89,7 @@ export function Analyst() {
 
             </ResizablePanel>
             <ResizableHandle />
-            <ResizablePanel>
+            <ResizablePanel defaultSize={60}>
                 <ScrollArea className="h-dvh p-4">
                     {!DCFData ? (
                         <div className="h-dvh flex justify-center items-center">
