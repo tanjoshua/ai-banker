@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { KeyboardEvent, useMemo, useState } from "react";
 
 export enum CellFormat {
     Number = "number",
@@ -48,7 +48,50 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
         }
     }
 
-    return <table className="border-collapse">
+    function handleKeyDown(e: KeyboardEvent<HTMLTableElement>) {
+        if (e.key === "Tab") {
+            e.preventDefault();
+        }
+
+        const currentCellRow = selectedCell?.row || 0;
+        const currentCellCol = selectedCell?.col || 0;
+
+        let newRow = selectedCell?.row || 0;
+        let newCol = selectedCell?.col || 0;
+
+        switch (e.key) {
+            case "ArrowUp":
+                newRow = Math.max(0, currentCellRow - 1);
+                break;
+            case "ArrowDown":
+                newRow = Math.min(cells.length - 1, currentCellRow + 1);
+                break;
+            case "ArrowLeft":
+                newCol = Math.max(0, currentCellCol - 1);
+                break;
+            case "ArrowRight":
+                newCol = Math.min(colCount - 1, currentCellCol + 1);
+                break;
+            case "Tab":
+                // move to next column, wrap to next row if needed
+                newCol = currentCellCol + 1;
+                if (newCol >= colCount) {
+                    newCol = 0;
+                    newRow = Math.min(cells.length - 1, currentCellRow + 1);
+                }
+                break;
+            default:
+                return;
+        }
+
+        setSelectedCell({
+            row: newRow,
+            col: newCol,
+            coordinates: getCoordinates(newCol, newRow)
+        })
+    }
+
+    return <table className="border-collapse" tabIndex={0} onKeyDown={handleKeyDown}>
         <thead>
             <tr>
                 <th className="border border-gray-300"></th>
