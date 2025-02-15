@@ -5,11 +5,29 @@ import { CompanySelection } from "./company-selection"
 import { experimental_useObject } from "@ai-sdk/react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
-import { ScrollArea } from "../ui/scroll-area";
+import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import { Fragment, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
 import { Button } from "../ui/button";
 import { RefreshCw } from "lucide-react";
+import { CellFormat, DCF, DCFRow, } from "./dcf";
+
+function defaultDCFData(): DCFRow[] {
+    return [
+        {
+            name: {
+                format: CellFormat.String,
+                value: "Revenue"
+            },
+            ...Array.from({ length: 11 }, (_, i) => ({
+                [i - 8]: {
+                    format: CellFormat.Number,
+                    value: "10000"
+                }
+            })).reduce((a, b) => ({ ...a, ...b }), {})
+        }
+    ]
+}
 
 export function Analyst() {
     const [selectedCompany, setSelectedCompany] = useState("")
@@ -19,6 +37,8 @@ export function Analyst() {
             schema: parameterSchema,
         }
     );
+
+    const [DCFData, setDCFData] = useState<DCFRow[]>(defaultDCFData())
 
     if (selectedCompany) {
         return <ResizablePanelGroup direction="horizontal">
@@ -63,7 +83,10 @@ export function Analyst() {
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel>
-
+                <ScrollArea className="h-dvh p-4">
+                    <DCF data={DCFData} year={2024} />
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
             </ResizablePanel>
 
         </ResizablePanelGroup>
