@@ -10,7 +10,8 @@ import { Fragment, useEffect, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
 import { Button } from "../ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
-import { CellFormat, DCF, DCFRow, } from "./dcf";
+import { CellFormat, DCFRow, } from "./dcf";
+import { DCF } from "../spreadsheet/dcf";
 
 function defaultDCFData(): DCFRow[] {
     return [
@@ -97,7 +98,7 @@ export function Analyst() {
                         </div>
                     ) : (
                         <>
-                            <DCF data={DCFData} year={2024} />
+                            <DCF />
                             <ScrollBar orientation="horizontal" />
                         </>
                     )}
