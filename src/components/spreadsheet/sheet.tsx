@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo } from "react";
+import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
 
 export enum CellFormat {
     Number = "number",
@@ -13,7 +14,21 @@ export type Cell = {
     value: string
 }
 
+export function getColumn(index: number) {
+    const letters: string[] = [];
+
+    while (index >= 0) {
+        letters.unshift(String.fromCharCode(65 + (index % 26)));
+        index = Math.floor(index / 26) - 1;
+    }
+
+    return letters.join('');
+}
+
+export function getCoordinates(colIndex: number, rowIndex: number) { return getColumn(colIndex) + (rowIndex + 1) }
+
 export function SpreadSheet({ cells }: { cells: Cell[][] }) {
+    const [selectedCell, setSelectedCell] = useState<{ row: number, col: number, coordinates: string }>();
     const colCount = useMemo(() => Math.max(...cells.map(row => row.length)), [cells]);
 
     function renderCell(cell: Cell) {
@@ -36,10 +51,10 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
     return <table className="border-collapse">
         <thead>
             <tr>
-                <th className="border border-gray-300 w-10"></th>
+                <th className="border border-gray-300"></th>
                 {Array.from({ length: colCount }, (_, colIndex) => (
                     <th key={colIndex} className="border border-gray-300 px-2 py-1">
-                        {String.fromCharCode(65 + colIndex)}
+                        {getColumn(colIndex)}
                     </th>
                 ))}
             </tr>
@@ -49,13 +64,19 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                 <tr key={rowIndex}>
                     <td className="border border-gray-300 text-center">{rowIndex + 1}</td>
                     {Array.from({ length: colCount }, (_, colIndex) => (
-                        <td key={colIndex} className="border border-gray-300 px-2 py-1">
+                        <td key={colIndex}
+                            onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
+                            className={
+                                cn(
+                                    "border border-gray-300 px-2 py-1 ",
+                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "bg-blue-50"
+                                )}>
                             {renderCell(row[colIndex] || { format: CellFormat.String, value: "" })}
                         </td>
                     ))}
                 </tr>
             ))}
         </tbody>
-    </table>
+    </table >
 
 }
