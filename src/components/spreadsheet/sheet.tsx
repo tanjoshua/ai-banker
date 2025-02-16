@@ -6,13 +6,14 @@ import { KeyboardEvent, useMemo, useState } from "react";
 export enum CellFormat {
     Number = "number",
     Percentage = "percentage",
-    String = "string"
+    String = "string",
 }
 
 export type Cell = {
     format: CellFormat
-    value: string
+    value: number | string
     className?: string;
+    formula?: string;
 }
 
 export function getColumn(index: number) {
@@ -33,17 +34,17 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
     const colCount = useMemo(() => Math.max(...cells.map(row => row.length)), [cells]);
 
     function renderCell(cell: Cell) {
-        let value = cell.value;
+        const value = cell.value;
 
-        if (value.startsWith("=")) {
-            value = "CALCULATED VALUE"
-        }
+        // if (value.startsWith("=")) {
+        //     value = "CALCULATED VALUE"
+        // }
 
         switch (cell.format) {
             case CellFormat.Number:
-                return parseFloat(value).toLocaleString('en-US');
+                return parseFloat(value as string).toLocaleString('en-US');
             case CellFormat.Percentage:
-                return (parseFloat(value) * 100).toLocaleString('en-US') + '%';
+                return (value as number * 100).toFixed(2) + '%';
             case CellFormat.String:
                 return value;
         }
@@ -113,11 +114,14 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                             onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
                             className={
                                 cn(
-                                    "px-2 py-1 whitespace-nowrap relative z-50",
-                                    cell.className,
-                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "ring-2 ring-blue-500 bg-blue-50",
+                                    "whitespace-nowrap relative z-50 cursor-default px-2 py-1",
+                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "ring-2 ring-blue-500 ",
+                                    cell.className
                                 )}>
-                            {renderCell(cell)}
+                            <div className={cn()}>
+
+                                {renderCell(cell)}
+                            </div>
                         </td>
                     })}
                 </tr>

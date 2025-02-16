@@ -66,7 +66,7 @@ export function Analyst() {
             <ResizableHandle />
             <ResizablePanel defaultSize={60}>
                 <ScrollArea className="h-dvh p-4">
-                    {!isLoading ? (
+                    {isLoading ? (
                         <div className="h-dvh flex justify-center items-center">
 
                             <Loader2 className="animate-spin text-muted-foreground" />
