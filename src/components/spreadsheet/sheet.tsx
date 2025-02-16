@@ -12,6 +12,7 @@ export enum CellFormat {
 export type Cell = {
     format: CellFormat
     value: string
+    className?: string;
 }
 
 export function getColumn(index: number) {
@@ -91,7 +92,7 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
         })
     }
 
-    return <table className="border-collapse" tabIndex={0} onKeyDown={handleKeyDown}>
+    return <table className="" tabIndex={0} onKeyDown={handleKeyDown}>
         <thead>
             <tr>
                 <th className="border border-gray-300"></th>
@@ -106,17 +107,19 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
             {cells.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                     <td className="border border-gray-300 text-center">{rowIndex + 1}</td>
-                    {Array.from({ length: colCount }, (_, colIndex) => (
-                        <td key={colIndex}
+                    {Array.from({ length: colCount }, (_, colIndex) => {
+                        const cell = row[colIndex] || { format: CellFormat.String, value: "" };
+                        return <td key={colIndex}
                             onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
                             className={
                                 cn(
-                                    "border border-gray-300 px-2 py-1 ",
-                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "bg-blue-50"
+                                    "px-2 py-1 whitespace-nowrap relative z-50",
+                                    cell.className,
+                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "ring-2 ring-blue-500 bg-blue-50",
                                 )}>
-                            {renderCell(row[colIndex] || { format: CellFormat.String, value: "" })}
+                            {renderCell(cell)}
                         </td>
-                    ))}
+                    })}
                 </tr>
             ))}
         </tbody>

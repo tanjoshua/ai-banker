@@ -6,29 +6,11 @@ import { experimental_useObject } from "@ai-sdk/react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
 import { Button } from "../ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
-import { CellFormat, DCFRow, } from "./dcf";
 import { DCF } from "../spreadsheet/dcf";
-
-function defaultDCFData(): DCFRow[] {
-    return [
-        {
-            name: {
-                format: CellFormat.String,
-                value: "Revenue"
-            },
-            ...Array.from({ length: 11 }, (_, i) => ({
-                [i - 8]: {
-                    format: CellFormat.Number,
-                    value: "10000"
-                }
-            })).reduce((a, b) => ({ ...a, ...b }), {})
-        }
-    ]
-}
 
 export function Analyst() {
     const [selectedCompany, setSelectedCompany] = useState("")
@@ -38,14 +20,7 @@ export function Analyst() {
             schema: parameterSchema,
         }
     );
-    const [DCFData, setDCFData] = useState<DCFRow[]>()
 
-    useEffect(() => {
-        if (object && !isLoading) {
-            // loading complete
-            setDCFData(defaultDCFData())
-        }
-    }, [object, isLoading])
 
     if (selectedCompany) {
         return <ResizablePanelGroup direction="horizontal">
@@ -91,7 +66,7 @@ export function Analyst() {
             <ResizableHandle />
             <ResizablePanel defaultSize={60}>
                 <ScrollArea className="h-dvh p-4">
-                    {!DCFData ? (
+                    {!isLoading ? (
                         <div className="h-dvh flex justify-center items-center">
 
                             <Loader2 className="animate-spin text-muted-foreground" />
