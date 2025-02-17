@@ -12,7 +12,8 @@ export function generateDCFCells() {
     const cells: Cell[][] = Array.from({ length: 30 }, () => Array(Math.abs(endYear - startYear) + 1).fill({ format: CellFormat.String, value: "" } as Cell));
 
     const revenueRow = 1;
-    const cogsRow = revenueRow + 1;
+    const revenueGrowthRow = revenueRow + 1;
+    const cogsRow = revenueGrowthRow + 1;
     const cogsMarginRow = cogsRow + 1;
     const grossProfitRow = cogsMarginRow + 2;
     const sgaRow = grossProfitRow + 1;
@@ -38,6 +39,11 @@ export function generateDCFCells() {
         format: CellFormat.String,
         value: "Revenue",
         className: "font-semibold"
+    }
+    cells[revenueGrowthRow][0] = {
+        format: CellFormat.String,
+        value: "% growth",
+        className: "italic"
     }
     cells[cogsRow][0] = {
         format: CellFormat.String,
@@ -144,8 +150,6 @@ export function generateDCFCells() {
 
     }
 
-
-
     // year headers
     for (let i = startYear; i <= endYear; i++) {
         const colIndex = i - startYear + 1; // +1 to leave space for the row titles
@@ -165,6 +169,15 @@ export function generateDCFCells() {
             const ticker = "MCD";
             const revenue = getHardcodedData(ticker, year, LineItem.Revenue);
             cells[revenueRow][colIndex] = { format: CellFormat.Number, value: revenue, className: "text-end" }
+
+
+            if (colIndex === 1) {
+                cells[revenueGrowthRow][colIndex] = { format: CellFormat.String, value: "", className: "text-end" }
+            } else {
+                const prevRevenue = getHardcodedData(ticker, year - 1, LineItem.Revenue);
+                const revenueGrowth = (revenue - prevRevenue) / prevRevenue;
+                cells[revenueGrowthRow][colIndex] = { format: CellFormat.Percentage, value: revenueGrowth, className: "text-end" }
+            }
 
             const cogs = getHardcodedData(ticker, year, LineItem.COGS);
             cells[cogsRow][colIndex] = { format: CellFormat.Number, value: -cogs, className: "text-end" }
