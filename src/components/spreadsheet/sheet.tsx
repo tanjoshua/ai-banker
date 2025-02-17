@@ -114,8 +114,8 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                             onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
                             className={
                                 cn(
-                                    "whitespace-nowrap relative z-50 cursor-default px-2 py-1",
-                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "ring-2 ring-blue-500 ",
+                                    "whitespace-nowrap relative cursor-default px-2 py-1",
+                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-10 ring-2 ring-primary",
                                     cell.className
                                 )}>
                             <div className={cn()}>

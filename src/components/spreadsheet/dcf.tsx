@@ -12,26 +12,26 @@ export function generateDCFCells() {
     const cells: Cell[][] = Array.from({ length: 30 }, () => Array(Math.abs(endYear - startYear) + 1).fill({ format: CellFormat.String, value: "" } as Cell));
 
     const revenueRow = 1;
-    const cogsRow = 2;
-    const cogsMarginRow = 3;
-    const grossProfitRow = 5;
-    const sgaRow = 5;
-    const sgaMarginRow = 6;
-    const daRow = 7;
-    const daCapexRow = 8;
-    const ebitdaRow = 10;
-    const ebitdaMarginRow = 11;
-    const ebitdaDaRow = 12
-    const ebitRow = 14;
-    const taxesRow = 15;
-    const taxRateRow = 16;
-    const nopatRow = 18;
-    const nopatDaRow = 19;
-    const nopatCapexRow = 20;
-    const nopatSalesIntensity = 21;
-    const nopatNwcDeltaRow = 22;
-    const nopatMarginRow = 23;
-    const ufcfRow = 25;
+    const cogsRow = revenueRow + 1;
+    const cogsMarginRow = cogsRow + 1;
+    const grossProfitRow = cogsMarginRow + 2;
+    const sgaRow = grossProfitRow + 1;
+    const sgaMarginRow = sgaRow + 1;
+    const daRow = sgaMarginRow + 1;
+    const daCapexRow = daRow + 1;
+    const ebitdaRow = daCapexRow + 2;
+    const ebitdaMarginRow = ebitdaRow + 1;
+    const ebitdaDaRow = ebitdaMarginRow + 1;
+    const ebitRow = ebitdaDaRow + 2;
+    const taxesRow = ebitRow + 1;
+    const taxRateRow = taxesRow + 1;
+    const nopatRow = taxRateRow + 2;
+    const nopatDaRow = nopatRow + 1;
+    const nopatCapexRow = nopatDaRow + 1;
+    const nopatSalesIntensity = nopatCapexRow + 1;
+    const nopatNwcDeltaRow = nopatSalesIntensity + 1;
+    const nopatMarginRow = nopatNwcDeltaRow + 1;
+    const ufcfRow = nopatMarginRow + 2;
 
 
     cells[revenueRow][0] = {
@@ -47,7 +47,7 @@ export function generateDCFCells() {
     cells[cogsMarginRow][0] = {
         format: CellFormat.String,
         value: "  % margin",
-        className: ""
+        className: "italic"
     }
     cells[grossProfitRow][0] = {
         format: CellFormat.String,
@@ -62,7 +62,7 @@ export function generateDCFCells() {
     cells[sgaMarginRow][0] = {
         format: CellFormat.String,
         value: "  % margin",
-        className: ""
+        className: "italic"
     }
     cells[daRow][0] = {
         format: CellFormat.String,
@@ -72,7 +72,7 @@ export function generateDCFCells() {
     cells[daCapexRow][0] = {
         format: CellFormat.String,
         value: "  % capex",
-        className: ""
+        className: "italic"
     }
     cells[ebitdaRow][0] = {
         format: CellFormat.String,
@@ -82,7 +82,7 @@ export function generateDCFCells() {
     cells[ebitdaMarginRow][0] = {
         format: CellFormat.String,
         value: "% margin",
-        className: ""
+        className: "italic"
     }
     cells[ebitdaDaRow][0] = {
         format: CellFormat.String,
@@ -103,7 +103,7 @@ export function generateDCFCells() {
     cells[taxRateRow][0] = {
         format: CellFormat.String,
         value: "  % effective tax rate",
-        className: ""
+        className: "italic"
     }
 
     cells[nopatRow][0] = {
@@ -124,7 +124,7 @@ export function generateDCFCells() {
     cells[nopatSalesIntensity][0] = {
         format: CellFormat.String,
         value: "% sales intensity",
-        className: ""
+        className: "italic"
     }
     cells[nopatNwcDeltaRow][0] = {
         format: CellFormat.String,
@@ -134,7 +134,7 @@ export function generateDCFCells() {
     cells[nopatMarginRow][0] = {
         format: CellFormat.String,
         value: "% margin",
-        className: ""
+        className: "italic"
     }
 
     cells[ufcfRow][0] = {
@@ -156,7 +156,8 @@ export function generateDCFCells() {
             format: CellFormat.String,
             value: `FY ${year}${suffix}`,
             className: cn(
-                "text-end font-semibold"
+                "text-end font-semibold",
+                actual ? "bg-blue-300" : "bg-green-300"
             )
         }
 
