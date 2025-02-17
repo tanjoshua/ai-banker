@@ -4,7 +4,16 @@ import { Cell, CellFormat, SpreadSheet } from "./sheet";
 import { getHardcodedData, LineItem } from "./mockData";
 
 
-export function generateDCFCells() {
+interface DCFParameters {
+    revenueGrowth: number;
+    cogsMargin: number;
+    sgaMargin: number;
+    daCapex: number;
+    taxRate: number;
+    salesIntensity: number;
+}
+
+export function generateDCFCells(ticker: string, params: DCFParameters) {
     const currentYear = 2024;
     const startYear = -8;
     const endYear = 10;
@@ -166,7 +175,6 @@ export function generateDCFCells() {
         }
 
         if (i <= 0) {
-            const ticker = "MCD";
             const revenue = getHardcodedData(ticker, year, LineItem.Revenue);
             cells[revenueRow][colIndex] = { format: CellFormat.Number, value: revenue, className: "text-end" }
 
@@ -226,6 +234,9 @@ export function generateDCFCells() {
 
             const ufcf = nopat + da - capex - changeInOperatingNWC;
             cells[ufcfRow][colIndex] = { format: CellFormat.Number, value: ufcf, className: "text-end font-semibold" }
+        } else {
+            const revenueGrowth = params.revenueGrowth;
+            cells[revenueGrowthRow][colIndex] = { format: CellFormat.Percentage, value: revenueGrowth, className: "text-end" }
         }
 
 
@@ -245,8 +256,8 @@ export function generateDCFCells() {
     return cells
 }
 
-export function DCF() {
-    const cells = generateDCFCells();
+export function DCF({ ticker, params }: { ticker: string; params: DCFParameters }) {
+    const cells = generateDCFCells(ticker, params);
 
     return (
         <SpreadSheet cells={cells} />

@@ -1,7 +1,7 @@
 "use client"
 
 import { parameterSchema } from "@/app/(main)/api/analyst/gen-params/route";
-import { CompanySelection } from "./company-selection"
+import { Company, CompanySelection } from "./company-selection"
 import { experimental_useObject } from "@ai-sdk/react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
@@ -13,7 +13,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { DCF } from "../spreadsheet/dcf";
 
 export function Analyst() {
-    const [selectedCompany, setSelectedCompany] = useState("")
+    const [selectedCompany, setSelectedCompany] = useState<Company>()
     const { object, submit, isLoading } = experimental_useObject(
         {
             api: 'api/analyst/gen-params',
@@ -29,9 +29,9 @@ export function Analyst() {
                     <div className="p-6">
                         <div className="flex items-center gap-4 mb-4">
                             <div className="font-bold text-xl ">
-                                {selectedCompany}
+                                {selectedCompany.name}
                             </div>
-                            <Button variant="outline" size="icon" onClick={() => setSelectedCompany("")}>
+                            <Button variant="outline" size="icon" onClick={() => setSelectedCompany(undefined)}>
                                 <RefreshCw />
                             </Button>
                         </div>
@@ -46,7 +46,8 @@ export function Analyst() {
                                 </Fragment>
                             }
                             {
-                                object?.parameters?.map((param, index) => <Card key={index}>
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                Object.values(object?.parameters || {}).map((param: any, index: number) => <Card key={index}>
                                     <CardHeader>
                                         <CardTitle>
                                             {param?.name}
@@ -66,21 +67,28 @@ export function Analyst() {
             <ResizableHandle />
             <ResizablePanel defaultSize={60}>
                 <ScrollArea className="h-dvh p-4">
-                    {isLoading ? (
+                    {isLoading || !object?.parameters ? (
                         <div className="h-dvh flex justify-center items-center">
 
                             <Loader2 className="animate-spin text-muted-foreground" />
                         </div>
                     ) : (
                         <>
-                            <DCF />
+                            <DCF ticker={selectedCompany.ticker} params={{
+                                revenueGrowth: object.parameters.revenueGrowth!.value!,
+                                cogsMargin: object.parameters.cogsMargin!.value!,
+                                sgaMargin: object.parameters.sgaMargin!.value!,
+                                daCapex: object.parameters.daCapex!.value!,
+                                taxRate: object.parameters.taxRate!.value!,
+                                salesIntensity: object.parameters.salesIntensity!.value!,
+                            }} />
                             <ScrollBar orientation="horizontal" />
                         </>
                     )}
                 </ScrollArea>
             </ResizablePanel>
 
-        </ResizablePanelGroup>
+        </ResizablePanelGroup >
     }
 
 
