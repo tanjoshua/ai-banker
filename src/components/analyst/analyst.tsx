@@ -24,7 +24,7 @@ export function Analyst() {
 
     if (selectedCompany) {
         return <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel defaultSize={40}>
+            <ResizablePanel defaultSize={30}>
                 <ScrollArea className="h-dvh">
                     <div className="p-6">
                         <div className="flex items-center gap-4 mb-4">
@@ -65,7 +65,7 @@ export function Analyst() {
 
             </ResizablePanel>
             <ResizableHandle />
-            <ResizablePanel defaultSize={60}>
+            <ResizablePanel defaultSize={70}>
                 <ScrollArea className="h-dvh p-4">
                     {isLoading || !object?.parameters ? (
                         <div className="h-dvh flex justify-center items-center">
