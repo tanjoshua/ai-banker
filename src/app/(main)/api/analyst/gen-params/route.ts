@@ -7,32 +7,42 @@ export const parameterSchema = z.object({
         revenueGrowth: z.object({
             name: z.literal('Revenue Growth'),
             value: z.number().describe('Estimated revenue growth rate for the future of the company.'),
-            reasoning: z.string().describe('Explanation of why this value was chosen.'),
+            reasoning: z.string().describe('Detailed explanation of why this value was chosen.'),
         }),
         cogsMargin: z.object({
             name: z.literal('COGS Margin'),
             value: z.number().describe('Estimated cost of goods sold margin for the future of the company. Calculated by cost of goods sold over revenue.'),
-            reasoning: z.string().describe('Explanation of why this value was chosen.'),
+            reasoning: z.string().describe('Detailed explanation of why this value was chosen.'),
         }),
         sgaMargin: z.object({
             name: z.literal('SG&A Margin'),
             value: z.number().describe('Estimated SG&A margin for the future of the company. Calculated by SG&A expense sold over revenue.'),
-            reasoning: z.string().describe('Explanation of why this value was chosen.'),
+            reasoning: z.string().describe('Detailed explanation of why this value was chosen.'),
         }),
         daCapex: z.object({
             name: z.literal('D&A as a % of CAPEX'),
             value: z.number().describe('Estimated percentage of depreciation and amortization out of capital expenditures.'),
-            reasoning: z.string().describe('Explanation of why this value was chosen.'),
+            reasoning: z.string().describe('Detailed explanation of why this value was chosen.'),
         }),
         taxRate: z.object({
             name: z.literal('Effective Tax Rate'),
             value: z.number().describe('Estimated effective tax rate for the future of the company.'),
-            reasoning: z.string().describe('Explanation of why this value was chosen.'),
+            reasoning: z.string().describe('Detailed explanation of why this value was chosen.'),
         }),
         salesIntensity: z.object({
             name: z.literal('Capex as a % of Revenue'),
             value: z.number().describe('Estimated percentage of capital expenditures out of revenue.'),
-            reasoning: z.string().describe('Explanation of why this value was chosen.'),
+            reasoning: z.string().describe('Detailed explanation of why this value was chosen.'),
+        }),
+        perpetuityGrowthRate: z.object({
+            name: z.literal('Perpetuity Growth Rate'),
+            value: z.number().describe('The rate at which revenue is expected to grow at every year if we assume that the company continues to operate forever'),
+            reasoning: z.string().describe('Detailed explanation of why this value was chosen.'),
+        }),
+        wacc: z.object({
+            name: z.literal('Weighted Average Cost of Capital'),
+            value: z.number().describe('Weighted Average Cost of Capital'),
+            reasoning: z.string().describe('Detailed explanation of why this value was chosen.'),
         }),
     }),
 });
