@@ -11,9 +11,9 @@ export enum CellFormat {
 
 export type Cell = {
     format: CellFormat
-    value: number | string
+    value: number | string;
     className?: string;
-    formula?: string;
+    evaluatedValue?: number;
 }
 
 export function getColumn(index: number) {
@@ -35,10 +35,6 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
 
     function renderCell(cell: Cell) {
         const value = cell.value;
-
-        // if (value.startsWith("=")) {
-        //     value = "CALCULATED VALUE"
-        // }
 
         switch (cell.format) {
             case CellFormat.Number:
