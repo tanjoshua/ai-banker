@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils";
-import { KeyboardEvent, useMemo, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 
 export enum CellFormat {
     Number = "number",
@@ -29,12 +29,41 @@ export function getColumn(index: number) {
 
 export function getCoordinates(colIndex: number, rowIndex: number) { return getColumn(colIndex) + (rowIndex + 1) }
 
+export function getColumnIndex(columnLetters: string): number {
+    let index = 0;
+    for (let i = 0; i < columnLetters.length; i++) {
+        const c = columnLetters.charCodeAt(i) - 64; // 'A' is 1, 'B' is 2, etc.
+        index = index * 26 + c;
+    }
+    return index - 1;
+}
+
+
 export function SpreadSheet({ cells }: { cells: Cell[][] }) {
     const [selectedCell, setSelectedCell] = useState<{ row: number, col: number, coordinates: string }>();
+    const [evaluatedCells, setEvaluatedCells] = useState<Cell[][]>();
     const colCount = useMemo(() => Math.max(...cells.map(row => row.length)), [cells]);
 
+    useEffect(() => {
+        // re evaluate cells when changed, can change to a more efficient strategy of only re evaluating the cells that have changed later on
+        const cellsCopy = cells.map(row => row.map(cell => ({ ...cell })))
+
+        cellsCopy.forEach((row) => {
+            row.forEach((cell) => {
+                if (typeof cell.value === 'string' && cell.value.startsWith("=") && cell.evaluatedValue === undefined) {
+                    // evaluate cells that are not yet evaluated yet
+                }
+            })
+        })
+
+        setEvaluatedCells(cellsCopy);
+    }, [cells])
+
     function renderCell(cell: Cell) {
-        const value = cell.value;
+        let value = cell.value
+        if (typeof cell.value === 'string' && cell.value.startsWith("=")) {
+            value = cell.evaluatedValue!
+        }
 
         switch (cell.format) {
             case CellFormat.Number:
@@ -89,6 +118,10 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
         })
     }
 
+    if (!evaluatedCells) {
+        return <div>Loading...</div>
+    }
+
     return <table className="" tabIndex={0} onKeyDown={handleKeyDown}>
         <thead>
             <tr>
@@ -101,7 +134,7 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
             </tr>
         </thead>
         <tbody>
-            {cells.map((row, rowIndex) => (
+            {evaluatedCells.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                     <td className="border border-gray-300 text-center">{rowIndex + 1}</td>
                     {Array.from({ length: colCount }, (_, colIndex) => {
