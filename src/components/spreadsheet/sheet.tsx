@@ -2,19 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { Cell, CellFormat } from "./types";
 
-export enum CellFormat {
-    Number = "number",
-    Percentage = "percentage",
-    String = "string",
-}
-
-export type Cell = {
-    format: CellFormat
-    value: number | string;
-    className?: string;
-    evaluatedValue?: number;
-}
 
 export function getColumn(index: number) {
     const letters: string[] = [];

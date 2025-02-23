@@ -1,7 +1,8 @@
 'use client';
 import { cn } from "@/lib/utils";
-import { Cell, CellFormat, SpreadSheet } from "./sheet";
+import { SpreadSheet } from "./sheet";
 import { getHardcodedData, LineItem } from "./mockData";
+import { Cell, CellFormat } from "./types";
 
 
 interface DCFParameters {
@@ -285,21 +286,7 @@ export function generateDCFCells(ticker: string, params: DCFParameters) {
             const ufcf = nopat + da - capex - changeInOperatingNWC;
             cells[ufcfRow][colIndex] = { format: CellFormat.Number, value: ufcf, className: "text-end font-semibold" }
         }
-
-
-
     }
-
-
-
-
-
-
-
-
-
-
-
     return cells
 }
 
