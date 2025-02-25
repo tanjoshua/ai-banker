@@ -8,5 +8,6 @@ export type Cell = {
     format: CellFormat
     value: number | string;
     className?: string;
-    evaluatedValue?: number;
+    evaluatedValue?: number | null;
+    error?: string | null;
 }
