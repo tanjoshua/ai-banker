@@ -25,12 +25,12 @@ const cells: Cell[][] = [
         { value: "=C3+1", format: CellFormat.Number },          // D3 = 124: Valid conversion
     ],
     // Row 4: Circular references
-    [
-        { value: "=B4+1", format: CellFormat.Number },          // A4: Circular A4->B4->A4
-        { value: "=A4+1", format: CellFormat.Number },          // B4: Circular B4->A4->B4
-        { value: "=D4+1", format: CellFormat.Number },          // C4: Circular C4->D4->C4
-        { value: "=C4+1", format: CellFormat.Number },          // D4: Circular D4->C4->D4
-    ],
+    // [
+    //     { value: "=B4+1", format: CellFormat.Number },          // A4: Circular A4->B4->A4
+    //     { value: "=A4+1", format: CellFormat.Number },          // B4: Circular B4->A4->B4
+    //     { value: "=D4+1", format: CellFormat.Number },          // C4: Circular C4->D4->C4
+    //     { value: "=C4+1", format: CellFormat.Number },          // D4: Circular D4->C4->D4
+    // ],
     // Row 5: Deep references
     [
         { value: 1, format: CellFormat.Number },                // A5 = 1

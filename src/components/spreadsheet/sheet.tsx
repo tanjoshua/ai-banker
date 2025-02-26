@@ -214,7 +214,21 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
         return <div>Loading...</div>
     }
 
-    return <table className="" tabIndex={0} onKeyDown={handleKeyDown}>
+    return <div className="w-full flex flex-col">
+        <div className="flex items-center h-10 bg-muted px-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-mono font-medium">
+                    {selectedCell ? selectedCell.coordinates : ""}
+                </span>
+                <span className="text-border">|</span>
+                <span>
+                    {selectedCell && evaluatedCells 
+                        ? evaluatedCells[selectedCell.row][selectedCell.col].value?.toString() || ""
+                        : ""}
+                </span>
+            </div>
+        </div>
+        <table className="" tabIndex={0} onKeyDown={handleKeyDown}>
         <thead>
             <tr>
                 <th className="border border-gray-300"></th>
@@ -248,6 +262,7 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                 </tr>
             ))}
         </tbody>
-    </table >
+    </table>
+    </div>
 
 }
