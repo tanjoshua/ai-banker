@@ -5,7 +5,7 @@ import { Company, CompanySelection } from "./company-selection"
 import { experimental_useObject } from "@ai-sdk/react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
-import { ScrollArea, ScrollBar } from "../ui/scroll-area";
+import { ScrollArea, } from "../ui/scroll-area";
 import { Fragment, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
 import { Button } from "../ui/button";
@@ -66,26 +66,23 @@ export function Analyst() {
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={70}>
-                <ScrollArea className="h-dvh">
-                    {isLoading || !object?.parameters ? (
-                        <div className="h-dvh flex justify-center items-center">
+                {isLoading || !object?.parameters ? (
+                    <div className="h-dvh flex justify-center items-center">
 
-                            <Loader2 className="animate-spin text-muted-foreground" />
-                        </div>
-                    ) : (
-                        <>
-                            <DCF ticker={selectedCompany.ticker} params={{
-                                revenueGrowth: object.parameters.revenueGrowth!.value!,
-                                cogsMargin: object.parameters.cogsMargin!.value!,
-                                sgaMargin: object.parameters.sgaMargin!.value!,
-                                daCapex: object.parameters.daCapex!.value!,
-                                taxRate: object.parameters.taxRate!.value!,
-                                salesIntensity: object.parameters.salesIntensity!.value!,
-                            }} />
-                            <ScrollBar orientation="horizontal" />
-                        </>
-                    )}
-                </ScrollArea>
+                        <Loader2 className="animate-spin text-muted-foreground" />
+                    </div>
+                ) : (
+                    <div className="h-dvh flex flex-col">
+                        <DCF ticker={selectedCompany.ticker} params={{
+                            revenueGrowth: object.parameters.revenueGrowth!.value!,
+                            cogsMargin: object.parameters.cogsMargin!.value!,
+                            sgaMargin: object.parameters.sgaMargin!.value!,
+                            daCapex: object.parameters.daCapex!.value!,
+                            taxRate: object.parameters.taxRate!.value!,
+                            salesIntensity: object.parameters.salesIntensity!.value!,
+                        }} />
+                    </div>
+                )}
             </ResizablePanel>
 
         </ResizablePanelGroup >

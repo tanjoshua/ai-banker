@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { Cell, CellFormat } from "./types";
 import { Parser as FormulaParser } from 'hot-formula-parser';
+import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 
 
 export function getColumn(index: number) {
@@ -207,7 +208,8 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
         return <div>Loading...</div>
     }
 
-    return <div className="w-full flex flex-col">
+    return <div className="w-full flex flex-col relative flex-1">
+
         <div className="flex items-center h-10 bg-muted px-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="font-mono font-medium">
@@ -221,41 +223,50 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                 </span>
             </div>
         </div>
-        <table className="" tabIndex={0} onKeyDown={handleKeyDown}>
-            <thead>
-                <tr>
-                    <th className="border border-gray-300"></th>
-                    {Array.from({ length: colCount }, (_, colIndex) => (
-                        <th key={colIndex} className="border border-gray-300 px-2 py-1">
-                            {getColumn(colIndex)}
-                        </th>
-                    ))}
-                </tr>
-            </thead>
-            <tbody>
-                {evaluatedCells.map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                        <td className="border border-gray-300 text-center">{rowIndex + 1}</td>
-                        {Array.from({ length: colCount }, (_, colIndex) => {
-                            const cell = row[colIndex] || { format: CellFormat.String, value: "" };
-                            return <td key={colIndex}
-                                onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
-                                className={
-                                    cn(
-                                        "whitespace-nowrap relative cursor-default px-2 py-1",
-                                        selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-10 ring-2 ring-primary",
-                                        cell.className
-                                    )}>
-                                <div className={cn()}>
 
-                                    {renderCell(cell)}
-                                </div>
-                            </td>
-                        })}
-                    </tr>
-                ))}
-            </tbody>
-        </table>
+        <ScrollArea className="flex-1 min-h-0">
+            <ScrollBar orientation="horizontal" />
+            <div className="relative h-full">
+                <table className="border-collapse" tabIndex={0} onKeyDown={handleKeyDown}>
+                    <thead>
+                        <tr>
+                            <th className="border border-gray-300 bg-background"></th>
+                            {Array.from({ length: colCount }, (_, colIndex) => (
+                                <th
+                                    key={colIndex}
+                                    className="border border-gray-300 px-2 py-1 bg-background z-20 sticky top-0"
+                                >
+                                    {getColumn(colIndex)}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {evaluatedCells.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                                <td className="border border-gray-300 text-center sticky left-0 z-10 bg-background">{rowIndex + 1}</td>
+                                {Array.from({ length: colCount }, (_, colIndex) => {
+                                    const cell = row[colIndex] || { format: CellFormat.String, value: "" };
+                                    return <td key={colIndex}
+                                        onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
+                                        className={
+                                            cn(
+                                                "whitespace-nowrap relative cursor-default px-2 py-1",
+                                                selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-20 ring-2 ring-primary",
+                                                cell.className
+                                            )}>
+                                        <div className={cn()}>
+
+                                            {renderCell(cell)}
+                                        </div>
+                                    </td>
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </ScrollArea>
     </div>
 
 }
