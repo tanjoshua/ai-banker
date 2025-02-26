@@ -1,8 +1,8 @@
 "use client"
 
 import { cn } from "@/lib/utils";
-import { KeyboardEvent,  useEffect, useMemo, useState } from "react";
-import { Cell,  CellFormat } from "./types";
+import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { Cell, CellFormat } from "./types";
 import { Parser as FormulaParser } from 'hot-formula-parser';
 
 
@@ -36,13 +36,12 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
 
     const { evaluateCell, parser } = useMemo(() => {
         const p = new FormulaParser();
-        
+
         const evaluate = (rowIndex: number, colIndex: number, cellsCopy: Cell[][]): number | null => {
             const cell = cellsCopy[rowIndex][colIndex];
-            
+
             // Check if we already have an evaluated value and the cell isn't a formula
-            if (cell.evaluatedValue !== undefined && 
-                (typeof cell.value !== 'string' || !cell.value.startsWith('='))) {
+            if (cell.evaluatedValue) {
                 return cell.evaluatedValue;
             }
 
@@ -65,16 +64,10 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                     cell.error = null;
                     result = cell.value;
                 } else if (typeof cell.value === 'string' && !cell.value.startsWith('=')) {
-                    const num = parseFloat(cell.value);
-                    if (!isNaN(num)) {
-                        cell.error = null;
-                        result = num;
-                    } else {
-                        cell.error = '#VALUE!';
-                        result = null;
-                    }
+                    // non formula strings should not be evaluated
+                    return null;
                 }
-            } catch  {
+            } catch {
                 cell.error = '#NAME?';
                 result = null;
             }
@@ -222,47 +215,47 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                 </span>
                 <span className="text-border">|</span>
                 <span>
-                    {selectedCell && evaluatedCells 
+                    {selectedCell && evaluatedCells
                         ? evaluatedCells[selectedCell.row][selectedCell.col].value?.toString() || ""
                         : ""}
                 </span>
             </div>
         </div>
         <table className="" tabIndex={0} onKeyDown={handleKeyDown}>
-        <thead>
-            <tr>
-                <th className="border border-gray-300"></th>
-                {Array.from({ length: colCount }, (_, colIndex) => (
-                    <th key={colIndex} className="border border-gray-300 px-2 py-1">
-                        {getColumn(colIndex)}
-                    </th>
-                ))}
-            </tr>
-        </thead>
-        <tbody>
-            {evaluatedCells.map((row, rowIndex) => (
-                <tr key={rowIndex}>
-                    <td className="border border-gray-300 text-center">{rowIndex + 1}</td>
-                    {Array.from({ length: colCount }, (_, colIndex) => {
-                        const cell = row[colIndex] || { format: CellFormat.String, value: "" };
-                        return <td key={colIndex}
-                            onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
-                            className={
-                                cn(
-                                    "whitespace-nowrap relative cursor-default px-2 py-1",
-                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-10 ring-2 ring-primary",
-                                    cell.className
-                                )}>
-                            <div className={cn()}>
-
-                                {renderCell(cell)}
-                            </div>
-                        </td>
-                    })}
+            <thead>
+                <tr>
+                    <th className="border border-gray-300"></th>
+                    {Array.from({ length: colCount }, (_, colIndex) => (
+                        <th key={colIndex} className="border border-gray-300 px-2 py-1">
+                            {getColumn(colIndex)}
+                        </th>
+                    ))}
                 </tr>
-            ))}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {evaluatedCells.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                        <td className="border border-gray-300 text-center">{rowIndex + 1}</td>
+                        {Array.from({ length: colCount }, (_, colIndex) => {
+                            const cell = row[colIndex] || { format: CellFormat.String, value: "" };
+                            return <td key={colIndex}
+                                onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
+                                className={
+                                    cn(
+                                        "whitespace-nowrap relative cursor-default px-2 py-1",
+                                        selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-10 ring-2 ring-primary",
+                                        cell.className
+                                    )}>
+                                <div className={cn()}>
+
+                                    {renderCell(cell)}
+                                </div>
+                            </td>
+                        })}
+                    </tr>
+                ))}
+            </tbody>
+        </table>
     </div>
 
 }
