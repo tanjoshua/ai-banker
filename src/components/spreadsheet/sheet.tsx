@@ -1,8 +1,8 @@
 "use client"
 
 import { cn } from "@/lib/utils";
-import { KeyboardEvent, useEffect, useMemo, useState } from "react";
-import { Cell, CellFormat } from "./types";
+import { KeyboardEvent,  useEffect, useMemo, useState } from "react";
+import { Cell,  CellFormat } from "./types";
 import { Parser as FormulaParser } from 'hot-formula-parser';
 
 
@@ -34,37 +34,70 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
     const [evaluatedCells, setEvaluatedCells] = useState<Cell[][]>();
     const colCount = useMemo(() => Math.max(...cells.map(row => row.length)), [cells]);
 
-    const parser = useMemo(() => {
+    const { evaluateCell, parser } = useMemo(() => {
         const p = new FormulaParser();
+        
+        const evaluate = (rowIndex: number, colIndex: number, cellsCopy: Cell[][]): number | null => {
+            const cell = cellsCopy[rowIndex][colIndex];
+            
+            // Check if we already have an evaluated value and the cell isn't a formula
+            if (cell.evaluatedValue !== undefined && 
+                (typeof cell.value !== 'string' || !cell.value.startsWith('='))) {
+                return cell.evaluatedValue;
+            }
 
-        p.on('callCellValue', (cellCoord, done) => {
-            const rowIndex = cellCoord.row.index; // Convert 1-based to 0-based
-            const colIndex = cellCoord.column.index;
+            let result: number | null = null;
 
-            // Check if the cell exists
-            if (cells[rowIndex] && cells[rowIndex][colIndex]) {
-                const cell = cells[rowIndex][colIndex];
-                if (cell.evaluatedValue !== undefined) {
-                    done(cell.evaluatedValue);
+            try {
+                if (typeof cell.value === 'string' && cell.value.startsWith('=')) {
+                    const formula = cell.value.substring(1);
+                    const parseResult = p.parse(formula);
+
+                    if (parseResult.error) {
+                        // Parser returns Excel-style errors, use them directly
+                        cell.error = parseResult.error;
+                        result = null;
+                    } else {
+                        cell.error = null;
+                        result = parseResult.result as number;
+                    }
                 } else if (typeof cell.value === 'number') {
-                    done(cell.value);
+                    cell.error = null;
+                    result = cell.value;
                 } else if (typeof cell.value === 'string' && !cell.value.startsWith('=')) {
-                    // TODO: UPDATE DEPENDENCIES
                     const num = parseFloat(cell.value);
                     if (!isNaN(num)) {
-                        done(num);
+                        cell.error = null;
+                        result = num;
                     } else {
-                        done(0);
+                        cell.error = '#VALUE!';
+                        result = null;
                     }
-                } else {
-                    done(0);
                 }
-            } else {
-                done(0); // Default to 0 for non-existent cells
+            } catch  {
+                cell.error = '#NAME?';
+                result = null;
             }
+
+            // Store the result in the cell
+            cell.evaluatedValue = result;
+            return result;
+        };
+
+        p.on('callCellValue', (cellCoord, done) => {
+            const rowIndex = cellCoord.row.index;
+            const colIndex = cellCoord.column.index;
+
+            if (!cells[rowIndex] || !cells[rowIndex][colIndex]) {
+                done(0);
+                return;
+            }
+
+            const cellsCopy = cells.map(row => row.map(cell => ({ ...cell })));
+            const result = evaluate(rowIndex, colIndex, cellsCopy);
+            done(result ?? 0);
         });
 
-        // Add support for range values (needed for SUM, AVERAGE, etc)
         p.on('callRangeValue', (startCell, endCell, done) => {
             const startRowIndex = startCell.row.index;
             const startColIndex = startCell.column.index;
@@ -72,20 +105,14 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
             const endColIndex = endCell.column.index;
 
             const values = [];
+            const cellsCopy = cells.map(row => row.map(cell => ({ ...cell })));
 
             for (let row = startRowIndex; row <= endRowIndex; row++) {
                 for (let col = startColIndex; col <= endColIndex; col++) {
                     if (cells[row] && cells[row][col]) {
-                        const cell = cells[row][col];
-                        if (cell.evaluatedValue !== undefined) {
-                            values.push(cell.evaluatedValue);
-                        } else if (typeof cell.value === 'number') {
-                            values.push(cell.value);
-                        } else if (typeof cell.value === 'string' && !cell.value.startsWith('=')) {
-                            const num = parseFloat(cell.value);
-                            if (!isNaN(num)) {
-                                values.push(num);
-                            }
+                        const result = evaluate(row, col, cellsCopy);
+                        if (result !== null) {
+                            values.push(result);
                         }
                     }
                 }
@@ -94,56 +121,45 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
             done(values);
         });
 
-        return p;
+        return {
+            evaluateCell: evaluate,
+            parser: p
+        };
     }, [cells]);
 
     useEffect(() => {
         const cellsCopy = cells.map(row => row.map(cell => ({ ...cell })));
 
-        // Function to evaluate a single cell
-        const evaluateCell = (rowIndex: number, colIndex: number) => {
-            const cell = cellsCopy[rowIndex][colIndex];
-
-            if (typeof cell.value === 'string' && cell.value.startsWith('=')) {
-                try {
-                    const formula = cell.value.substring(1);
-                    console.log("evaluating formula", formula)
-                    const result = parser.parse(formula);
-                    console.log("formula result", result)
-                    cell.evaluatedValue = result.error ? null : result.result as number;
-                    cell.error = result.error;
-                } catch {
-                    cell.evaluatedValue = null;
-                    cell.error = 'ERROR';
-                }
-            } else if (typeof cell.value === 'number') {
-                cell.evaluatedValue = cell.value;
-                cell.error = null;
-            } else {
-                cell.evaluatedValue = null;
-                cell.error = 'NOT_NUMBER';
-            }
-        };
-
-        // Evaluate all cells
+        // Initial evaluation of all cells
         cellsCopy.forEach((row, rowIndex) => {
             row.forEach((_, colIndex) => {
-                evaluateCell(rowIndex, colIndex);
+                evaluateCell(rowIndex, colIndex, cellsCopy);
             });
         });
 
         setEvaluatedCells(cellsCopy);
-    }, [cells, parser])
+    }, [cells, parser, evaluateCell])
 
     function renderCell(cell: Cell) {
-        let value = cell.value
-        if (typeof cell.value === 'string' && cell.value.startsWith("=")) {
-            value = cell.evaluatedValue!
+        // If cell has an error, display it
+        if (cell.error) {
+            return cell.error;  // Parser errors already include the # and !
         }
 
+        // For formulas, use evaluated value
+        let value = cell.value;
+        if (typeof cell.value === 'string' && cell.value.startsWith('=')) {
+            if (!cell.evaluatedValue) {
+                return '#ERROR!';
+            }
+            value = cell.evaluatedValue;
+        }
+
+        // Format the value based on cell type
         switch (cell.format) {
             case CellFormat.Number:
-                return parseFloat(value as string).toLocaleString('en-US');
+                const num = typeof value === 'string' ? parseFloat(value) : value;
+                return isNaN(num) ? '#NaN' : num.toLocaleString('en-US');
             case CellFormat.Percentage:
                 return (value as number * 100).toFixed(2) + '%';
             case CellFormat.String:
