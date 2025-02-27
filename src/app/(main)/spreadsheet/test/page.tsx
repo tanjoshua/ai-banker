@@ -44,6 +44,12 @@ const cells: Cell[][] = [
         { value: "=AVERAGE(A5:D5)", format: CellFormat.Number }, // B6: Range average
         { value: "=(A1+B1)*C1/D1", format: CellFormat.Number }, // C6: Complex arithmetic
         { value: "=A1+B1+C1+D1", format: CellFormat.Number },   // D6: Multiple references
+    ],
+    // Row 7: testing zero numbers
+    [
+        { value: 0, format: CellFormat.Number },
+        { value: "=A7/2", format: CellFormat.Number },
+        { value: "=A7", format: CellFormat.Number }
     ]
 ]
 

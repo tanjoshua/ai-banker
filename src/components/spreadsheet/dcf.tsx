@@ -249,7 +249,7 @@ export function generateDCFCells(ticker: string, params: DCFParameters) {
             cells[ebitdaDaRow][colIndex] = { format: CellFormat.Number, value: negativeDaFormula, className: "text-end" };
 
             // EBIT
-            const ebitFormula = `=${currentEbitdaRef}+${negativeDaFormula}`;
+            const ebitFormula = `=${currentEbitdaRef}+${getCoordinates(colIndex, ebitdaDaRow)}`;
             cells[ebitRow][colIndex] = { format: CellFormat.Number, value: ebitFormula, className: "text-end" };
             const currentEbitRef = getCoordinates(colIndex, ebitRow);
 
@@ -349,7 +349,7 @@ export function generateDCFCells(ticker: string, params: DCFParameters) {
             const ebitdaFormula = `=${currentGrossProfitRef}-${currentSgaRef}+${currentDaRef}`;
             const ebitdaMarginFormula = `=${currentEbitdaRef}/${currentRevenueRef}`;
             const negativeDaFormula = `=-${currentDaRef}`;
-            const ebitFormula = `=${currentEbitdaRef}-${currentDaRef}`;
+            const ebitFormula = `=${currentEbitdaRef}+${getCoordinates(colIndex, ebitdaDaRow)}`;
             const taxesFormula = `=${currentEbitRef}*${currentTaxRateRef}`;
             const nopatFormula = `=${currentEbitRef}-${currentTaxesRef}`;
             const nwcDeltaValue = `=${currentRevenueRef}*${currentNwcDeltaMarginRef}`;

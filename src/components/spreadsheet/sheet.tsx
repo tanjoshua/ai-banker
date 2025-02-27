@@ -143,7 +143,7 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
         // For formulas, use evaluated value
         let value = cell.value;
         if (typeof cell.value === 'string' && cell.value.startsWith('=')) {
-            if (!cell.evaluatedValue) {
+            if (cell.evaluatedValue === null || cell.evaluatedValue === undefined) {
                 return '#ERROR!';
             }
             value = cell.evaluatedValue;
