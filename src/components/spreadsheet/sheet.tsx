@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { Cell, CellFormat } from "./types";
 import { Parser as FormulaParser } from 'hot-formula-parser';
-import { ScrollArea, ScrollBar } from "../ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 
 export function getColumn(index: number) {
@@ -208,9 +208,9 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
         return <div>Loading...</div>
     }
 
-    return <div className="w-full flex flex-col relative flex-1">
+    return <div className="w-full flex flex-col relative flex-1 min-h-0">
 
-        <div className="flex items-center h-10 bg-muted px-2">
+        <div className="flex items-center h-10 bg-muted px-2 ">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="font-mono font-medium">
                     {selectedCell ? selectedCell.coordinates : ""}
@@ -218,7 +218,7 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                 <span className="text-border">|</span>
                 <span>
                     {selectedCell && evaluatedCells
-                        ? evaluatedCells[selectedCell.row][selectedCell.col].value?.toString() || ""
+                        ? evaluatedCells[selectedCell.row][selectedCell.col]?.value?.toString() || ""
                         : ""}
                 </span>
             </div>
@@ -226,8 +226,8 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
 
         <ScrollArea className="flex-1 min-h-0">
             <ScrollBar orientation="horizontal" />
-            <div className="relative h-full">
-                <table className="border-collapse" tabIndex={0} onKeyDown={handleKeyDown}>
+            <div className="relative h-full min-w-max">
+                <table className="border-collapse w-full" tabIndex={0} onKeyDown={handleKeyDown}>
                     <thead>
                         <tr>
                             <th className="border border-gray-300 bg-background"></th>
