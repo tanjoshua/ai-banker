@@ -30,8 +30,31 @@ export function getColumnIndex(columnLetters: string): number {
 }
 
 
-export function SpreadSheet({ cells }: { cells: Cell[][] }) {
-    const [selectedCell, setSelectedCell] = useState<{ row: number, col: number, coordinates: string }>();
+export function SpreadSheet({
+    cells,
+    selectedCell: externalSelectedCell,
+    onSelectCell: externalSetSelectedCell
+}: {
+    cells: Cell[][],
+    selectedCell?: { row: number, col: number, coordinates: string },
+    onSelectCell?: (cell: { row: number, col: number, coordinates: string }) => void
+}) {
+    const [internalSelectedCell, setInternalSelectedCell] = useState<{ row: number, col: number, coordinates: string }>();
+
+    // Use external state if provided, otherwise use internal state
+    const selectedCell = externalSelectedCell !== undefined ? externalSelectedCell : internalSelectedCell;
+
+    // Function to update the selected cell
+    const setSelectedCell = (cell: { row: number, col: number, coordinates: string }) => {
+        if (externalSetSelectedCell) {
+            // If external handler is provided, call it
+            externalSetSelectedCell(cell);
+        } else {
+            // Otherwise use internal state
+            setInternalSelectedCell(cell);
+        }
+    };
+
     const [evaluatedCells, setEvaluatedCells] = useState<Cell[][]>();
     const colCount = useMemo(() => Math.max(...cells.map(row => row.length)), [cells]);
 
@@ -201,7 +224,7 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
             row: newRow,
             col: newCol,
             coordinates: getCoordinates(newCol, newRow)
-        })
+        });
     }
 
     if (!evaluatedCells) {
@@ -248,7 +271,11 @@ export function SpreadSheet({ cells }: { cells: Cell[][] }) {
                                 {Array.from({ length: colCount }, (_, colIndex) => {
                                     const cell = row[colIndex] || { format: CellFormat.String, value: "" };
                                     return <td key={colIndex}
-                                        onClick={() => setSelectedCell({ row: rowIndex, col: colIndex, coordinates: getCoordinates(colIndex, rowIndex) })}
+                                        onClick={() => setSelectedCell({
+                                            row: rowIndex,
+                                            col: colIndex,
+                                            coordinates: getCoordinates(colIndex, rowIndex)
+                                        })}
                                         className={
                                             cn(
                                                 "whitespace-nowrap relative cursor-default px-2 py-1",
