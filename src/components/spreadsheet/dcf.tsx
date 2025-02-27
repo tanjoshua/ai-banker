@@ -1,6 +1,6 @@
 'use client';
 import { cn } from "@/lib/utils";
-import { SpreadSheet } from "./sheet";
+import { SpreadSheet, getCoordinates } from "./sheet";
 import { getHardcodedData, LineItem } from "./mockData";
 import { Cell, CellFormat } from "./types";
 
@@ -236,55 +236,172 @@ export function generateDCFCells(ticker: string, params: DCFParameters) {
             const ufcf = nopat + da - capex - changeInOperatingNWC;
             cells[ufcfRow][colIndex] = { format: CellFormat.Number, value: ufcf, className: "text-end font-semibold" }
         } else {
-            const revenueGrowth = params.revenueGrowth;
-            cells[revenueGrowthRow][colIndex] = { format: CellFormat.Percentage, value: revenueGrowth, className: "text-end bg-yellow-100" }
+            // Input parameters (yellow background)
+            cells[revenueGrowthRow][colIndex] = {
+                format: CellFormat.Percentage,
+                value: params.revenueGrowth,
+                className: "text-end bg-yellow-100"
+            }
+            cells[cogsMarginRow][colIndex] = {
+                format: CellFormat.Percentage,
+                value: params.cogsMargin,
+                className: "text-end bg-yellow-100"
+            }
+            cells[sgaMarginRow][colIndex] = {
+                format: CellFormat.Percentage,
+                value: params.sgaMargin,
+                className: "text-end bg-yellow-100"
+            }
+            cells[daCapexRow][colIndex] = {
+                format: CellFormat.Percentage,
+                value: params.daCapex,
+                className: "text-end bg-yellow-100"
+            }
+            cells[taxRateRow][colIndex] = {
+                format: CellFormat.Percentage,
+                value: params.taxRate,
+                className: "text-end bg-yellow-100"
+            }
+            cells[nopatSalesIntensity][colIndex] = {
+                format: CellFormat.Percentage,
+                value: params.salesIntensity,
+                className: "text-end bg-yellow-100"
+            }
 
-            const prevYearRevenue = cells[revenueRow][colIndex - 1].value as number;
-            const currentYearRevenue = prevYearRevenue * (1 + revenueGrowth);
-            cells[revenueRow][colIndex] = { format: CellFormat.Number, value: currentYearRevenue, className: "text-end" }
+            // Get cell references for the current column
+            const prevColIndex = colIndex - 1;
+            const prevRevenueRef = getCoordinates(prevColIndex, revenueRow);
+            const currentRevenueGrowthRef = getCoordinates(colIndex, revenueGrowthRow);
+            const currentRevenueRef = getCoordinates(colIndex, revenueRow);
+            const currentCogsMarginRef = getCoordinates(colIndex, cogsMarginRow);
+            const currentCogsRef = getCoordinates(colIndex, cogsRow);
+            const currentGrossProfitRef = getCoordinates(colIndex, grossProfitRow);
+            const currentSgaMarginRef = getCoordinates(colIndex, sgaMarginRow);
+            const currentSgaRef = getCoordinates(colIndex, sgaRow);
+            const currentDaRef = getCoordinates(colIndex, daRow);
+            const currentDaCapexRef = getCoordinates(colIndex, daCapexRow);
+            const currentEbitdaRef = getCoordinates(colIndex, ebitdaRow);
+            const currentEbitRef = getCoordinates(colIndex, ebitRow);
+            const currentTaxRateRef = getCoordinates(colIndex, taxRateRow);
+            const currentTaxesRef = getCoordinates(colIndex, taxesRow);
+            const currentNopatRef = getCoordinates(colIndex, nopatRow);
+            const currentSalesIntensityRef = getCoordinates(colIndex, nopatSalesIntensity);
+            const currentCapexRef = getCoordinates(colIndex, nopatCapexRow);
+            const currentNwcDeltaRef = getCoordinates(colIndex, nopatNwcDeltaRow);
+            const currentNwcDeltaMarginRef = getCoordinates(colIndex, nopatMarginRow);
 
+            // Create formulas with descriptive variable names
+            const revenueFormula = `=${prevRevenueRef}*(1+${currentRevenueGrowthRef})`;
+            const cogsFormula = `=${currentRevenueRef}*${currentCogsMarginRef}`;
+            const grossProfitFormula = `=${currentRevenueRef}-${currentCogsRef}`;
+            const sgaFormula = `=${currentGrossProfitRef}*${currentSgaMarginRef}`;
+            const capexFormula = `=${currentRevenueRef}*${currentSalesIntensityRef}`;
+            const daFormula = `=${currentCapexRef}*${currentDaCapexRef}`;
+            const ebitdaFormula = `=${currentGrossProfitRef}-${currentSgaRef}+${currentDaRef}`;
+            const ebitdaMarginFormula = `=${currentEbitdaRef}/${currentRevenueRef}`;
+            const negativeDaFormula = `=-${currentDaRef}`;
+            const ebitFormula = `=${currentEbitdaRef}-${currentDaRef}`;
+            const taxesFormula = `=${currentEbitRef}*${currentTaxRateRef}`;
+            const nopatFormula = `=${currentEbitRef}-${currentTaxesRef}`;
+            const nwcDeltaValue = `=${currentRevenueRef}*${currentNwcDeltaMarginRef}`;
+            const ufcfFormula = `=${currentNopatRef}+${currentDaRef}-${currentCapexRef}-${currentNwcDeltaRef}`;
 
-            const cogs = currentYearRevenue * params.cogsMargin;
-            cells[cogsRow][colIndex] = { format: CellFormat.Number, value: cogs, className: "text-end" }
-            cells[cogsMarginRow][colIndex] = { format: CellFormat.Percentage, value: params.cogsMargin, className: "text-end bg-yellow-100" }
+            // Assign formulas to cells
+            cells[revenueRow][colIndex] = {
+                format: CellFormat.Number,
+                value: revenueFormula,
+                className: "text-end"
+            }
 
-            const grossProfit = currentYearRevenue - cogs;
-            cells[grossProfitRow][colIndex] = { format: CellFormat.Number, value: grossProfit, className: "text-end" }
-            const sga = grossProfit * params.sgaMargin;
-            cells[sgaRow][colIndex] = { format: CellFormat.Number, value: sga, className: "text-end" }
-            cells[sgaMarginRow][colIndex] = { format: CellFormat.Percentage, value: params.sgaMargin, className: "text-end bg-yellow-100" }
+            cells[cogsRow][colIndex] = {
+                format: CellFormat.Number,
+                value: cogsFormula,
+                className: "text-end"
+            }
 
-            const capex = currentYearRevenue * params.salesIntensity;
+            cells[grossProfitRow][colIndex] = {
+                format: CellFormat.Number,
+                value: grossProfitFormula,
+                className: "text-end"
+            }
 
-            const da = capex * params.daCapex;
-            cells[daRow][colIndex] = { format: CellFormat.Number, value: da, className: "text-end" }
-            cells[daCapexRow][colIndex] = { format: CellFormat.Percentage, value: params.daCapex, className: "text-end bg-yellow-100" }
+            cells[sgaRow][colIndex] = {
+                format: CellFormat.Number,
+                value: sgaFormula,
+                className: "text-end"
+            }
 
-            const ebitda = grossProfit - sga + da;
-            cells[ebitdaRow][colIndex] = { format: CellFormat.Number, value: ebitda, className: "text-end" }
+            cells[nopatCapexRow][colIndex] = {
+                format: CellFormat.Number,
+                value: capexFormula,
+                className: "text-end"
+            }
 
-            const ebitdaMargin = ebitda / currentYearRevenue;
-            cells[ebitdaMarginRow][colIndex] = { format: CellFormat.Percentage, value: ebitdaMargin, className: "text-end" }
-            cells[ebitdaDaRow][colIndex] = { format: CellFormat.Number, value: -da, className: "text-end" }
+            cells[daRow][colIndex] = {
+                format: CellFormat.Number,
+                value: daFormula,
+                className: "text-end"
+            }
 
-            const ebit = ebitda - da;
-            const taxes = ebit * params.taxRate;
-            cells[ebitRow][colIndex] = { format: CellFormat.Number, value: ebit, className: "text-end" }
-            cells[taxesRow][colIndex] = { format: CellFormat.Number, value: taxes, className: "text-end" }
-            cells[taxRateRow][colIndex] = { format: CellFormat.Percentage, value: params.taxRate, className: "text-end bg-yellow-100" }
+            cells[ebitdaRow][colIndex] = {
+                format: CellFormat.Number,
+                value: ebitdaFormula,
+                className: "text-end"
+            }
 
-            const nopat = ebit - taxes;
-            cells[nopatRow][colIndex] = { format: CellFormat.Number, value: nopat, className: "text-end" }
-            cells[nopatDaRow][colIndex] = { format: CellFormat.Number, value: da, className: "text-end" }
-            cells[nopatCapexRow][colIndex] = { format: CellFormat.Number, value: capex, className: "text-end" }
-            cells[nopatSalesIntensity][colIndex] = { format: CellFormat.Percentage, value: params.salesIntensity, className: "text-end bg-yellow-100" }
+            cells[ebitdaMarginRow][colIndex] = {
+                format: CellFormat.Percentage,
+                value: ebitdaMarginFormula,
+                className: "text-end"
+            }
 
-            const changeInOperatingNWC = 0;
-            cells[nopatNwcDeltaRow][colIndex] = { format: CellFormat.Number, value: changeInOperatingNWC, className: "text-end" }
-            cells[nopatMarginRow][colIndex] = { format: CellFormat.Percentage, value: changeInOperatingNWC / currentYearRevenue, className: "text-end" }
+            cells[ebitdaDaRow][colIndex] = {
+                format: CellFormat.Number,
+                value: negativeDaFormula,
+                className: "text-end"
+            }
 
-            const ufcf = nopat + da - capex - changeInOperatingNWC;
-            cells[ufcfRow][colIndex] = { format: CellFormat.Number, value: ufcf, className: "text-end font-semibold" }
+            cells[ebitRow][colIndex] = {
+                format: CellFormat.Number,
+                value: ebitFormula,
+                className: "text-end"
+            }
+
+            cells[taxesRow][colIndex] = {
+                format: CellFormat.Number,
+                value: taxesFormula,
+                className: "text-end"
+            }
+
+            cells[nopatRow][colIndex] = {
+                format: CellFormat.Number,
+                value: nopatFormula,
+                className: "text-end"
+            }
+
+            cells[nopatDaRow][colIndex] = {
+                format: CellFormat.Number,
+                value: `=${currentDaRef}`,
+                className: "text-end"
+            }
+
+            cells[nopatNwcDeltaRow][colIndex] = {
+                format: CellFormat.Number,
+                value: nwcDeltaValue,
+                className: "text-end"
+            }
+
+            cells[nopatMarginRow][colIndex] = {
+                format: CellFormat.Percentage,
+                value: 0,
+                className: "text-end"
+            }
+
+            cells[ufcfRow][colIndex] = {
+                format: CellFormat.Number,
+                value: ufcfFormula,
+                className: "text-end font-semibold"
+            }
         }
     }
     return cells
