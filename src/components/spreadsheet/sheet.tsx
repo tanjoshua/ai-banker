@@ -1,41 +1,23 @@
 "use client"
 
 import { cn } from "@/lib/utils";
-import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { KeyboardEvent, useState } from "react";
 import { Cell, CellFormat } from "./types";
-import { Parser as FormulaParser } from 'hot-formula-parser';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useFormulaParser } from "./hooks/useFormulaParser";
+import { FormulaBar } from "./components/FormulaBar";
+import { getCoordinates, renderCellValue, getColumn } from "./utils/cellUtils";
 
-
-export function getColumn(index: number) {
-    const letters: string[] = [];
-
-    while (index >= 0) {
-        letters.unshift(String.fromCharCode(65 + (index % 26)));
-        index = Math.floor(index / 26) - 1;
-    }
-
-    return letters.join('');
-}
-
-export function getCoordinates(colIndex: number, rowIndex: number) { return getColumn(colIndex) + (rowIndex + 1) }
-
-export function getColumnIndex(columnLetters: string): number {
-    let index = 0;
-    for (let i = 0; i < columnLetters.length; i++) {
-        const c = columnLetters.charCodeAt(i) - 64; // 'A' is 1, 'B' is 2, etc.
-        index = index * 26 + c;
-    }
-    return index - 1;
-}
-
+export { getColumn, getCoordinates, getColumnIndex } from "./utils/cellUtils";
 
 export function SpreadSheet({
     cells,
+    setCells,
     selectedCell: externalSelectedCell,
     onSelectCell: externalSetSelectedCell
 }: {
     cells: Cell[][],
+    setCells: (cells: Cell[][]) => void,
     selectedCell?: { row: number, col: number, coordinates: string },
     onSelectCell?: (cell: { row: number, col: number, coordinates: string }) => void
 }) {
@@ -55,134 +37,8 @@ export function SpreadSheet({
         }
     };
 
-    const [evaluatedCells, setEvaluatedCells] = useState<Cell[][]>();
-    const colCount = useMemo(() => Math.max(...cells.map(row => row.length)), [cells]);
-
-    const { evaluateCell, parser } = useMemo(() => {
-        const p = new FormulaParser();
-
-        const evaluate = (rowIndex: number, colIndex: number, cellsCopy: Cell[][]): number | null => {
-            const cell = cellsCopy[rowIndex][colIndex];
-
-            // Check if we already have an evaluated value and the cell isn't a formula
-            if (cell.evaluatedValue) {
-                return cell.evaluatedValue;
-            }
-
-            let result: number | null = null;
-
-            try {
-                if (typeof cell.value === 'string' && cell.value.startsWith('=')) {
-                    const formula = cell.value.substring(1);
-                    const parseResult = p.parse(formula);
-
-                    if (parseResult.error) {
-                        // Parser returns Excel-style errors, use them directly
-                        cell.error = parseResult.error;
-                        result = null;
-                    } else {
-                        cell.error = null;
-                        result = parseResult.result as number;
-                    }
-                } else if (typeof cell.value === 'number') {
-                    cell.error = null;
-                    result = cell.value;
-                } else if (typeof cell.value === 'string' && !cell.value.startsWith('=')) {
-                    // non formula strings should not be evaluated
-                    return null;
-                }
-            } catch {
-                cell.error = '#NAME?';
-                result = null;
-            }
-
-            // Store the result in the cell
-            cell.evaluatedValue = result;
-            return result;
-        };
-
-        p.on('callCellValue', (cellCoord, done) => {
-            const rowIndex = cellCoord.row.index;
-            const colIndex = cellCoord.column.index;
-
-            if (!cells[rowIndex] || !cells[rowIndex][colIndex]) {
-                done(0);
-                return;
-            }
-
-            const cellsCopy = cells.map(row => row.map(cell => ({ ...cell })));
-            const result = evaluate(rowIndex, colIndex, cellsCopy);
-            done(result ?? 0);
-        });
-
-        p.on('callRangeValue', (startCell, endCell, done) => {
-            const startRowIndex = startCell.row.index;
-            const startColIndex = startCell.column.index;
-            const endRowIndex = endCell.row.index;
-            const endColIndex = endCell.column.index;
-
-            const values = [];
-            const cellsCopy = cells.map(row => row.map(cell => ({ ...cell })));
-
-            for (let row = startRowIndex; row <= endRowIndex; row++) {
-                for (let col = startColIndex; col <= endColIndex; col++) {
-                    if (cells[row] && cells[row][col]) {
-                        const result = evaluate(row, col, cellsCopy);
-                        if (result !== null) {
-                            values.push(result);
-                        }
-                    }
-                }
-            }
-
-            done(values);
-        });
-
-        return {
-            evaluateCell: evaluate,
-            parser: p
-        };
-    }, [cells]);
-
-    useEffect(() => {
-        const cellsCopy = cells.map(row => row.map(cell => ({ ...cell })));
-
-        // Initial evaluation of all cells
-        cellsCopy.forEach((row, rowIndex) => {
-            row.forEach((_, colIndex) => {
-                evaluateCell(rowIndex, colIndex, cellsCopy);
-            });
-        });
-
-        setEvaluatedCells(cellsCopy);
-    }, [cells, parser, evaluateCell])
-
-    function renderCell(cell: Cell) {
-        // If cell has an error, display it
-        if (cell.error) {
-            return cell.error;  // Parser errors already include the # and !
-        }
-
-        // For formulas, use evaluated value
-        let value = cell.value;
-        if (typeof cell.value === 'string' && cell.value.startsWith('=')) {
-            if (cell.evaluatedValue === null || cell.evaluatedValue === undefined) {
-                return '#ERROR!';
-            }
-            value = cell.evaluatedValue;
-        }
-
-        // Format the value based on cell type
-        switch (cell.format) {
-            case CellFormat.Number:
-                const num = typeof value === 'string' ? parseFloat(value) : value;
-                return isNaN(num) ? '#NaN' : num.toLocaleString('en-US');
-            case CellFormat.Percentage:
-                return (value as number * 100).toFixed(2) + '%';
-            case CellFormat.String:
-                return value;
-        }
-    }
+    const { evaluatedCells } = useFormulaParser(cells);
+    const colCount = Math.max(...cells.map(row => row.length));
 
     function handleKeyDown(e: KeyboardEvent<HTMLTableElement>) {
         if (e.key === "Tab") {
@@ -231,69 +87,66 @@ export function SpreadSheet({
         return <div>Loading...</div>
     }
 
-    return <div className="w-full flex flex-col relative flex-1 min-h-0">
+    const selectedCellValue = selectedCell && evaluatedCells[selectedCell.row]?.[selectedCell.col]?.value;
 
-        <div className="flex items-center h-10 bg-muted px-2 ">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-mono font-medium">
-                    {selectedCell ? selectedCell.coordinates : ""}
-                </span>
-                <span className="text-border">|</span>
-                <span>
-                    {selectedCell && evaluatedCells
-                        ? evaluatedCells[selectedCell.row][selectedCell.col]?.value?.toString() || ""
-                        : ""}
-                </span>
-            </div>
-        </div>
+    return (
+        <div className="w-full flex flex-col relative flex-1 min-h-0">
+            <FormulaBar
+                selectedCell={selectedCell}
+                cellValue={selectedCellValue}
+            />
 
-        <ScrollArea className="flex-1 min-h-0">
-            <ScrollBar orientation="horizontal" />
-            <div className="relative h-full min-w-max">
-                <table className="border-collapse w-full" tabIndex={0} onKeyDown={handleKeyDown}>
-                    <thead>
-                        <tr>
-                            <th className="border border-gray-300 bg-background"></th>
-                            {Array.from({ length: colCount }, (_, colIndex) => (
-                                <th
-                                    key={colIndex}
-                                    className="border border-gray-300 px-2 py-1 bg-background z-20 sticky top-0"
-                                >
-                                    {getColumn(colIndex)}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {evaluatedCells.map((row, rowIndex) => (
-                            <tr key={rowIndex}>
-                                <td className="border border-gray-300 text-center sticky left-0 z-10 bg-background">{rowIndex + 1}</td>
-                                {Array.from({ length: colCount }, (_, colIndex) => {
-                                    const cell = row[colIndex] || { format: CellFormat.String, value: "" };
-                                    return <td key={colIndex}
-                                        onClick={() => setSelectedCell({
-                                            row: rowIndex,
-                                            col: colIndex,
-                                            coordinates: getCoordinates(colIndex, rowIndex)
-                                        })}
-                                        className={
-                                            cn(
-                                                "whitespace-nowrap relative cursor-default px-2 py-1",
-                                                selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-20 ring-2 ring-primary",
-                                                cell.className
-                                            )}>
-                                        <div className={cn()}>
-
-                                            {renderCell(cell)}
-                                        </div>
-                                    </td>
-                                })}
+            <ScrollArea className="flex-1 min-h-0">
+                <ScrollBar orientation="horizontal" />
+                <div className="relative h-full min-w-max">
+                    <table className="border-collapse w-full" tabIndex={0} onKeyDown={handleKeyDown}>
+                        <thead>
+                            <tr>
+                                <th className="border border-gray-300 bg-background"></th>
+                                {Array.from({ length: colCount }, (_, colIndex) => (
+                                    <th
+                                        key={colIndex}
+                                        className="border border-gray-300 px-2 py-1 bg-background z-20 sticky top-0"
+                                    >
+                                        {getColumn(colIndex)}
+                                    </th>
+                                ))}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </ScrollArea>
-    </div>
-
+                        </thead>
+                        <tbody>
+                            {evaluatedCells.map((row, rowIndex) => (
+                                <tr key={rowIndex}>
+                                    <td className="border border-gray-300 text-center sticky left-0 z-10 bg-background">
+                                        {rowIndex + 1}
+                                    </td>
+                                    {Array.from({ length: colCount }, (_, colIndex) => {
+                                        const cell = row[colIndex] || { format: CellFormat.String, value: "" };
+                                        return (
+                                            <td
+                                                key={colIndex}
+                                                onClick={() => setSelectedCell({
+                                                    row: rowIndex,
+                                                    col: colIndex,
+                                                    coordinates: getCoordinates(colIndex, rowIndex)
+                                                })}
+                                                className={cn(
+                                                    "whitespace-nowrap relative cursor-default px-2 py-1",
+                                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-20 ring-2 ring-primary",
+                                                    cell.className
+                                                )}
+                                            >
+                                                <div>
+                                                    {renderCellValue(cell)}
+                                                </div>
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </ScrollArea>
+        </div>
+    );
 }
