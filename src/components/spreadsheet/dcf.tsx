@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { SpreadSheet, getCoordinates } from "./sheet";
 import { getHardcodedData, LineItem } from "./mockData";
 import { Cell, CellFormat } from "./types";
+import { useState } from "react";
 
 
 interface DCFParameters {
@@ -457,9 +458,11 @@ export function generateDCFCells(ticker: string, params: DCFParameters) {
 }
 
 export function DCF({ ticker, params }: { ticker: string; params: DCFParameters }) {
-    const cells = generateDCFCells(ticker, params);
+    const [cells, setCells] = useState<Cell[][]>(
+        generateDCFCells(ticker, params)
+    );
 
     return (
-        <SpreadSheet cells={cells} />
+        <SpreadSheet cells={cells} setCells={setCells} />
     )
 }

@@ -54,5 +54,5 @@ const cells: Cell[][] = [
 ]
 
 export default function SpreadsheetTestPage() {
-    return <SpreadSheet cells={cells} />
+    return <SpreadSheet cells={cells} setCells={() => { }} />
 }
