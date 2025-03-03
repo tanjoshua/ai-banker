@@ -1,13 +1,18 @@
 import React from 'react';
+import { Input } from "@/components/ui/input";
 
 interface FormulaBarProps {
     selectedCell: { row: number; col: number; coordinates: string } | undefined;
     cellValue: string | number | null | undefined;
+    onValueChange?: (value: string) => void;
+    onKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
 export function FormulaBar({
     selectedCell,
-    cellValue
+    cellValue,
+    onValueChange,
+    onKeyDown
 }: FormulaBarProps) {
     return (
         <div className="flex items-center h-10 bg-muted px-2 border-b">
@@ -16,9 +21,15 @@ export function FormulaBar({
             </div>
 
             <div className="flex-1 flex items-center">
-                <div className="px-3 py-1 h-7 w-full flex items-center">
-                    {cellValue?.toString() || ""}
-                </div>
+                <Input
+                    disabled={!onValueChange}
+                    className="h-7"
+                    value={cellValue?.toString() || ""}
+                    onChange={e => onValueChange?.(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    placeholder="Enter value or formula"
+                    readOnly={!onValueChange}
+                />
             </div>
         </div>
     );

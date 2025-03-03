@@ -19,10 +19,18 @@ export function DisplaySheet({
     onSelectCell?: (cell: { row: number, col: number, coordinates: string }) => void
 }) {
     const [internalSelectedCell, setInternalSelectedCell] = useState<{ row: number, col: number, coordinates: string }>();
-    const [editingCell, setEditingCell] = useState<{ row: number, col: number } | null>(null);
-    const [editValue, setEditValue] = useState("");
+    const [editingState, setEditingState] = useState<{
+        cell: { row: number, col: number } | null,
+        value: string,
+        source: 'cell' | 'formulaBar' | null
+    }>({
+        cell: null,
+        value: "",
+        source: null
+    });
     const inputRef = useRef<HTMLInputElement>(null);
     const tableRef = useRef<HTMLTableElement>(null);
+    const formulaBarRef = useRef<HTMLInputElement>(null);
 
     // Use external state if provided, otherwise use internal state
     const selectedCell = externalSelectedCell !== undefined ? externalSelectedCell : internalSelectedCell;
@@ -47,27 +55,32 @@ export function DisplaySheet({
         const cell = cells[selectedCell.row]?.[selectedCell.col];
         if (!cell) return;
 
-        setEditingCell({ row: selectedCell.row, col: selectedCell.col });
-        // For formulas, display the raw formula
-        setEditValue(cell.value?.toString() || "");
+        setEditingState({
+            cell: { row: selectedCell.row, col: selectedCell.col },
+            value: cell.value?.toString() || "",
+            source: 'cell'
+        });
     };
 
     // Save the edited value to the cell
-    const saveEdit = () => {
-        if (!editingCell) return;
+    const saveEdit = (moveDirection: 'down' | 'none' = 'down') => {
+        if (!editingState.cell && editingState.source === null) return;
 
-        // Explicitly blur the input to release focus
+        const cellToUpdate = editingState.cell || selectedCell;
+        if (!cellToUpdate) return;
+
+        // Explicitly blur the input
         if (inputRef.current) {
             inputRef.current.blur();
         }
 
         const updatedCells = cells.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
-                if (rowIndex === editingCell.row && colIndex === editingCell.col) {
+                if (rowIndex === cellToUpdate.row && colIndex === cellToUpdate.col) {
                     // Check if the value is a number and the cell format is Number
-                    let newValue: string | number = editValue;
-                    if (cell.format === CellFormat.Number && !editValue.startsWith('=')) {
-                        const number = parseFloat(editValue);
+                    let newValue: string | number = editingState.value;
+                    if (cell.format === CellFormat.Number && !editingState.value.startsWith('=')) {
+                        const number = parseFloat(editingState.value);
                         if (!isNaN(number)) {
                             newValue = number;
                         }
@@ -85,10 +98,10 @@ export function DisplaySheet({
         );
 
         setCells(updatedCells);
-        setEditingCell(null);
+        setEditingState({ cell: null, value: "", source: null });
 
-        // Move to the next cell down after edit (Excel behavior)
-        if (selectedCell && cells.length > 0) {
+        // Move to the next cell after edit if requested
+        if (moveDirection === 'down' && selectedCell && cells.length > 0) {
             // If already at the last row, stay in the same cell
             // Otherwise move down one row
             const newRow = selectedCell.row >= cells.length - 1
@@ -102,33 +115,73 @@ export function DisplaySheet({
             });
         }
 
-        // Focus the table directly using ref
-        if (tableRef.current) {
-            tableRef.current.focus();
+        // Only focus the table if NOT editing from formula bar
+        if (editingState.source !== 'formulaBar') {
+            // Focus the table directly using ref
+            if (tableRef.current) {
+                tableRef.current.focus();
+            }
+        }
+    };
+
+    // Handle formula bar value changes
+    const handleFormulaBarChange = (value: string) => {
+        setEditingState({
+            // Transform selectedCell to match the expected type
+            cell: selectedCell ? { row: selectedCell.row, col: selectedCell.col } : null,
+            value: value,
+            source: 'formulaBar'
+        });
+    };
+
+    // Handle Enter key in formula bar
+    const handleFormulaBarKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setEditingState({ cell: null, value: "", source: null });
         }
     };
 
     // Handle focus management when edit state changes
     useEffect(() => {
-        if (editingCell) {
-            // When entering edit mode, focus the input
+        if (editingState.source === 'cell' && editingState.cell) {
+            // When entering cell edit mode, focus the cell input
             if (inputRef.current) {
                 inputRef.current.focus();
             }
-        } else {
+        } else if (editingState.source === 'formulaBar') {
+            // When editing via formula bar, focus the formula bar
+            if (formulaBarRef.current) {
+                formulaBarRef.current.focus();
+            }
+        } else if (editingState.source === null) {
             // When exiting edit mode, focus the table
             if (tableRef.current) {
                 tableRef.current.focus();
             }
         }
-    }, [editingCell]);
+    }, [editingState.source, editingState.cell]);
+
+    // When selected cell changes, update the formula bar value
+    useEffect(() => {
+        if (selectedCell && editingState.source === null && !editingState.cell) {
+            const value = cells[selectedCell.row]?.[selectedCell.col]?.value;
+            setEditingState(prev => ({
+                ...prev,
+                value: value?.toString() || ""
+            }));
+        }
+    }, [selectedCell, cells, editingState.source]);
 
     function handleKeyDown(e: KeyboardEvent<HTMLTableElement>) {
         // Skip if there are no cells
         if (!cells || cells.length === 0) return;
 
         // If currently editing, handle different keyboard events
-        if (editingCell) {
+        if (editingState.cell) {
             switch (e.key) {
                 case "Enter":
                     e.preventDefault();
@@ -136,7 +189,7 @@ export function DisplaySheet({
                     break;
                 case "Escape":
                     e.preventDefault();
-                    setEditingCell(null);
+                    setEditingState({ cell: null, value: "", source: null });
                     break;
                 case "Tab":
                     // DO NOTHING HERE - let the input's onKeyDown handle Tab
@@ -202,7 +255,10 @@ export function DisplaySheet({
                 // If it's a printable character, start editing and set the value to that character
                 if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
                     startEditing();
-                    setEditValue(e.key);
+                    setEditingState(prev => ({
+                        ...prev,
+                        value: e.key
+                    }));
                     return;
                 }
                 return;
@@ -228,8 +284,11 @@ export function DisplaySheet({
     return (
         <div className="w-full flex flex-col relative flex-1 min-h-0">
             <FormulaBar
+                ref={formulaBarRef}
                 selectedCell={selectedCell}
-                cellValue={selectedCellValue}
+                cellValue={editingState.source !== null ? editingState.value : selectedCellValue}
+                onValueChange={handleFormulaBarChange}
+                onKeyDown={handleFormulaBarKeyDown}
             />
 
             <ScrollArea className="flex-1 min-h-0">
@@ -257,7 +316,10 @@ export function DisplaySheet({
                                     </td>
                                     {Array.from({ length: colCount }, (_, colIndex) => {
                                         const cell = row[colIndex] || { format: CellFormat.String, value: "" };
-                                        const isEditing = editingCell?.row === rowIndex && editingCell?.col === colIndex;
+                                        const isEditing = editingState.cell?.row === rowIndex && editingState.cell?.col === colIndex;
+                                        const isEditingViaFormulaBar = editingState.source === 'formulaBar' &&
+                                            selectedCell?.row === rowIndex &&
+                                            selectedCell?.col === colIndex;
 
                                         return (
                                             <td
@@ -285,16 +347,22 @@ export function DisplaySheet({
                                                     <input
                                                         ref={inputRef}
                                                         className="absolute inset-0 w-full h-full px-2 py-1 border-none outline-none"
-                                                        value={editValue}
-                                                        onChange={(e) => setEditValue(e.target.value)}
-                                                        onBlur={saveEdit}
+                                                        value={editingState.value}
+                                                        onChange={(e) => {
+                                                            const newValue = e.target.value;
+                                                            setEditingState(prev => ({
+                                                                ...prev,
+                                                                value: newValue
+                                                            }));
+                                                        }}
+                                                        onBlur={() => saveEdit()}
                                                         onKeyDown={(e) => {
                                                             if (e.key === 'Enter') {
                                                                 e.preventDefault();
                                                                 saveEdit();
                                                             } else if (e.key === 'Escape') {
                                                                 e.preventDefault();
-                                                                setEditingCell(null);
+                                                                setEditingState({ cell: null, value: "", source: null });
                                                             } else if (e.key === 'Tab') {
                                                                 e.preventDefault();
 
@@ -347,6 +415,8 @@ export function DisplaySheet({
                                                             e.stopPropagation();
                                                         }}
                                                     />
+                                                ) : isEditingViaFormulaBar ? (
+                                                    <div className="text-primary">{editingState.value}</div>
                                                 ) : (
                                                     <div>
                                                         {renderCellValue(cell)}
