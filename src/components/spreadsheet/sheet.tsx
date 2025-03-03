@@ -8,6 +8,7 @@ export { getColumn, getCoordinates, getColumnIndex } from "./utils/cellUtils";
 
 export function SpreadSheet({
     cells,
+    setCells,
     selectedCell: externalSelectedCell,
     onSelectCell: externalSetSelectedCell
 }: {
@@ -18,5 +19,10 @@ export function SpreadSheet({
 }) {
     const { evaluatedCells } = useFormulaParser(cells);
 
-    return <DisplaySheet cells={evaluatedCells} selectedCell={externalSelectedCell} onSelectCell={externalSetSelectedCell} />
+    return <DisplaySheet
+        cells={evaluatedCells}
+        setCells={setCells}
+        selectedCell={externalSelectedCell}
+        onSelectCell={externalSetSelectedCell}
+    />
 }

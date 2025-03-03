@@ -1,23 +1,28 @@
 "use client"
 
 import { cn } from "@/lib/utils";
-import { KeyboardEvent, useState } from "react";
+import { KeyboardEvent, useState, useRef, useEffect } from "react";
 import { Cell, CellFormat } from "./types";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { FormulaBar } from "./components/FormulaBar";
 import { getCoordinates, renderCellValue, getColumn } from "./utils/cellUtils";
 
-
 export function DisplaySheet({
     cells,
+    setCells,
     selectedCell: externalSelectedCell,
     onSelectCell: externalSetSelectedCell
 }: {
     cells: Cell[][],
+    setCells: (cells: Cell[][]) => void,
     selectedCell?: { row: number, col: number, coordinates: string },
     onSelectCell?: (cell: { row: number, col: number, coordinates: string }) => void
 }) {
     const [internalSelectedCell, setInternalSelectedCell] = useState<{ row: number, col: number, coordinates: string }>();
+    const [editingCell, setEditingCell] = useState<{ row: number, col: number } | null>(null);
+    const [editValue, setEditValue] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
+    const tableRef = useRef<HTMLTableElement>(null);
 
     // Use external state if provided, otherwise use internal state
     const selectedCell = externalSelectedCell !== undefined ? externalSelectedCell : internalSelectedCell;
@@ -35,18 +40,127 @@ export function DisplaySheet({
 
     const colCount = Math.max(...cells.map(row => row.length));
 
-    function handleKeyDown(e: KeyboardEvent<HTMLTableElement>) {
-        if (e.key === "Tab") {
-            e.preventDefault();
+    // Start editing the selected cell
+    const startEditing = () => {
+        if (!selectedCell) return;
+
+        const cell = cells[selectedCell.row]?.[selectedCell.col];
+        if (!cell) return;
+
+        setEditingCell({ row: selectedCell.row, col: selectedCell.col });
+        // For formulas, display the raw formula
+        setEditValue(cell.value?.toString() || "");
+    };
+
+    // Save the edited value to the cell
+    const saveEdit = () => {
+        if (!editingCell) return;
+
+        // Explicitly blur the input to release focus
+        if (inputRef.current) {
+            inputRef.current.blur();
         }
 
-        const currentCellRow = selectedCell?.row || 0;
-        const currentCellCol = selectedCell?.col || 0;
+        const updatedCells = cells.map((row, rowIndex) =>
+            row.map((cell, colIndex) => {
+                if (rowIndex === editingCell.row && colIndex === editingCell.col) {
+                    // Check if the value is a number and the cell format is Number
+                    let newValue: string | number = editValue;
+                    if (cell.format === CellFormat.Number && !editValue.startsWith('=')) {
+                        const number = parseFloat(editValue);
+                        if (!isNaN(number)) {
+                            newValue = number;
+                        }
+                    }
 
-        let newRow = selectedCell?.row || 0;
-        let newCol = selectedCell?.col || 0;
+                    return {
+                        ...cell,
+                        value: newValue,
+                        evaluatedValue: undefined, // Clear for re-evaluation
+                        error: null
+                    };
+                }
+                return cell;
+            })
+        );
+
+        setCells(updatedCells);
+        setEditingCell(null);
+
+        // Move to the next cell down after edit (Excel behavior)
+        if (selectedCell && cells.length > 0) {
+            // If already at the last row, stay in the same cell
+            // Otherwise move down one row
+            const newRow = selectedCell.row >= cells.length - 1
+                ? cells.length - 1
+                : selectedCell.row + 1;
+
+            setSelectedCell({
+                row: newRow,
+                col: selectedCell.col,
+                coordinates: getCoordinates(selectedCell.col, newRow)
+            });
+        }
+
+        // Focus the table directly using ref
+        if (tableRef.current) {
+            tableRef.current.focus();
+        }
+    };
+
+    // Handle focus management when edit state changes
+    useEffect(() => {
+        if (editingCell) {
+            // When entering edit mode, focus the input
+            if (inputRef.current) {
+                inputRef.current.focus();
+            }
+        } else {
+            // When exiting edit mode, focus the table
+            if (tableRef.current) {
+                tableRef.current.focus();
+            }
+        }
+    }, [editingCell]);
+
+    function handleKeyDown(e: KeyboardEvent<HTMLTableElement>) {
+        // Skip if there are no cells
+        if (!cells || cells.length === 0) return;
+
+        // If currently editing, handle different keyboard events
+        if (editingCell) {
+            switch (e.key) {
+                case "Enter":
+                    e.preventDefault();
+                    saveEdit();
+                    break;
+                case "Escape":
+                    e.preventDefault();
+                    setEditingCell(null);
+                    break;
+                case "Tab":
+                    // DO NOTHING HERE - let the input's onKeyDown handle Tab
+                    // The input already has its own Tab handler with stopPropagation
+                    break;
+                // All other keys should be handled by the input field
+                default:
+                    return;
+            }
+            return;
+        }
+
+        // Safely get current position, defaulting to (0,0) if undefined
+        const currentCellRow = selectedCell?.row ?? 0;
+        const currentCellCol = selectedCell?.col ?? 0;
+
+        let newRow = currentCellRow;
+        let newCol = currentCellCol;
 
         switch (e.key) {
+            case "F2":
+                e.preventDefault();
+                startEditing();
+                return;
             case "ArrowUp":
                 newRow = Math.max(0, currentCellRow - 1);
                 break;
@@ -59,17 +173,44 @@ export function DisplaySheet({
             case "ArrowRight":
                 newCol = Math.min(colCount - 1, currentCellCol + 1);
                 break;
+            case "Enter":
+                e.preventDefault();
+                // Move down on Enter (Excel behavior)
+                newRow = Math.min(cells.length - 1, currentCellRow + 1);
+                break;
             case "Tab":
-                // move to next column, wrap to next row if needed
-                newCol = currentCellCol + 1;
-                if (newCol >= colCount) {
-                    newCol = 0;
-                    newRow = Math.min(cells.length - 1, currentCellRow + 1);
+                e.preventDefault();
+                if (e.shiftKey) {
+                    // Move left on Shift+Tab
+                    newCol = currentCellCol - 1;
+                    if (newCol < 0) {
+                        // Wrap to previous row
+                        newCol = colCount - 1;
+                        newRow = Math.max(0, currentCellRow - 1);
+                    }
+                } else {
+                    // Move right on Tab
+                    newCol = currentCellCol + 1;
+                    if (newCol >= colCount) {
+                        // Wrap to next row
+                        newCol = 0;
+                        newRow = Math.min(cells.length - 1, currentCellRow + 1);
+                    }
                 }
                 break;
             default:
+                // If it's a printable character, start editing and set the value to that character
+                if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    startEditing();
+                    setEditValue(e.key);
+                    return;
+                }
                 return;
         }
+
+        // Ensure we're within valid bounds
+        newRow = Math.max(0, Math.min(cells.length - 1, newRow));
+        newCol = Math.max(0, Math.min(colCount - 1, newCol));
 
         setSelectedCell({
             row: newRow,
@@ -94,7 +235,7 @@ export function DisplaySheet({
             <ScrollArea className="flex-1 min-h-0">
                 <ScrollBar orientation="horizontal" />
                 <div className="relative h-full min-w-max">
-                    <table className="border-collapse w-full" tabIndex={0} onKeyDown={handleKeyDown}>
+                    <table className="border-collapse w-full" tabIndex={0} onKeyDown={handleKeyDown} ref={tableRef}>
                         <thead>
                             <tr>
                                 <th className="border border-gray-300 bg-background"></th>
@@ -116,6 +257,8 @@ export function DisplaySheet({
                                     </td>
                                     {Array.from({ length: colCount }, (_, colIndex) => {
                                         const cell = row[colIndex] || { format: CellFormat.String, value: "" };
+                                        const isEditing = editingCell?.row === rowIndex && editingCell?.col === colIndex;
+
                                         return (
                                             <td
                                                 key={colIndex}
@@ -124,15 +267,91 @@ export function DisplaySheet({
                                                     col: colIndex,
                                                     coordinates: getCoordinates(colIndex, rowIndex)
                                                 })}
+                                                onDoubleClick={() => {
+                                                    setSelectedCell({
+                                                        row: rowIndex,
+                                                        col: colIndex,
+                                                        coordinates: getCoordinates(colIndex, rowIndex)
+                                                    });
+                                                    startEditing();
+                                                }}
                                                 className={cn(
                                                     "whitespace-nowrap relative cursor-default px-2 py-1",
                                                     selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-20 ring-2 ring-primary",
                                                     cell.className
                                                 )}
                                             >
-                                                <div>
-                                                    {renderCellValue(cell)}
-                                                </div>
+                                                {isEditing ? (
+                                                    <input
+                                                        ref={inputRef}
+                                                        className="absolute inset-0 w-full h-full px-2 py-1 border-none outline-none"
+                                                        value={editValue}
+                                                        onChange={(e) => setEditValue(e.target.value)}
+                                                        onBlur={saveEdit}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                saveEdit();
+                                                            } else if (e.key === 'Escape') {
+                                                                e.preventDefault();
+                                                                setEditingCell(null);
+                                                            } else if (e.key === 'Tab') {
+                                                                e.preventDefault();
+
+                                                                // Get current position before saving edit
+                                                                const savedRow = selectedCell?.row ?? 0;
+                                                                const savedCol = selectedCell?.col ?? 0;
+
+                                                                // End editing and save changes
+                                                                saveEdit();
+
+                                                                // Calculate new position based on Shift key
+                                                                let newRow = savedRow;
+                                                                let newCol = savedCol;
+
+                                                                if (e.shiftKey) {
+                                                                    // Move left on Shift+Tab
+                                                                    newCol = savedCol - 1;
+                                                                    if (newCol < 0) {
+                                                                        // Wrap to previous row
+                                                                        newCol = colCount - 1;
+                                                                        newRow = Math.max(0, savedRow - 1);
+                                                                    }
+                                                                } else {
+                                                                    // Move right on Tab
+                                                                    newCol = savedCol + 1;
+                                                                    if (newCol >= colCount) {
+                                                                        // Wrap to next row
+                                                                        newCol = 0;
+                                                                        newRow = Math.min(cells.length - 1, savedRow + 1);
+                                                                    }
+                                                                }
+
+                                                                // Ensure we're within valid bounds
+                                                                newRow = Math.max(0, Math.min(cells.length - 1, newRow));
+                                                                newCol = Math.max(0, Math.min(colCount - 1, newCol));
+
+                                                                setSelectedCell({
+                                                                    row: newRow,
+                                                                    col: newCol,
+                                                                    coordinates: getCoordinates(newCol, newRow)
+                                                                });
+
+                                                                // Focus the table directly using ref
+                                                                if (tableRef.current) {
+                                                                    tableRef.current.focus();
+                                                                }
+                                                            }
+
+                                                            // Prevent event bubbling to the table's handler
+                                                            e.stopPropagation();
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div>
+                                                        {renderCellValue(cell)}
+                                                    </div>
+                                                )}
                                             </td>
                                         );
                                     })}

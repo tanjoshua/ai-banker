@@ -5,15 +5,20 @@ interface FormulaBarProps {
     cellValue: string | number | null | undefined;
 }
 
-export function FormulaBar({ selectedCell, cellValue }: FormulaBarProps) {
+export function FormulaBar({
+    selectedCell,
+    cellValue
+}: FormulaBarProps) {
     return (
-        <div className="flex items-center h-10 bg-muted px-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-mono font-medium">
-                    {selectedCell ? selectedCell.coordinates : ""}
-                </span>
-                <span className="text-border">|</span>
-                <span>{cellValue?.toString() || ""}</span>
+        <div className="flex items-center h-10 bg-muted px-2 border-b">
+            <div className="font-mono font-medium text-sm mr-2 w-14 flex-shrink-0">
+                {selectedCell ? selectedCell.coordinates : ""}
+            </div>
+
+            <div className="flex-1 flex items-center">
+                <div className="px-3 py-1 h-7 w-full flex items-center">
+                    {cellValue?.toString() || ""}
+                </div>
             </div>
         </div>
     );
