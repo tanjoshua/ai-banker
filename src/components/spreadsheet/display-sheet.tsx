@@ -210,6 +210,27 @@ export function DisplaySheet({
         let newCol = currentCellCol;
 
         switch (e.key) {
+            case "Delete":
+                e.preventDefault();
+                if (selectedCell) {
+                    // Create a copy of the cells array
+                    const updatedCells = cells.map((row, rowIndex) =>
+                        row.map((cell, colIndex) => {
+                            if (rowIndex === selectedCell.row && colIndex === selectedCell.col) {
+                                // Clear the cell value
+                                return {
+                                    ...cell,
+                                    value: "",
+                                    evaluatedValue: undefined,
+                                    error: null
+                                };
+                            }
+                            return cell;
+                        })
+                    );
+                    setCells(updatedCells);
+                }
+                return;
             case "F2":
                 e.preventDefault();
                 startEditing();
