@@ -165,9 +165,9 @@ export function DisplaySheet({
         }
     }, [editingState.source, editingState.cell]);
 
-    // When selected cell changes, update the formula bar value
+    // When selected cell changes, update the formula bar value - revised version
     useEffect(() => {
-        if (selectedCell && editingState.source === null && !editingState.cell) {
+        if (selectedCell && editingState.source === null) {
             const value = cells[selectedCell.row]?.[selectedCell.col]?.value;
             setEditingState(prev => ({
                 ...prev,
@@ -252,13 +252,20 @@ export function DisplaySheet({
                 }
                 break;
             default:
-                // If it's a printable character, start editing and set the value to that character
+                // Replace this entire section for handling character input
                 if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-                    startEditing();
-                    setEditingState(prev => ({
-                        ...prev,
-                        value: e.key
-                    }));
+                    if (!selectedCell) return;
+
+                    // Stop any race conditions by batching these operations
+                    e.preventDefault();
+
+                    // First make sure editingState.source is set (this will prevent the useEffect from running)
+                    setEditingState({
+                        cell: { row: selectedCell.row, col: selectedCell.col },
+                        value: e.key,
+                        source: 'cell'
+                    });
+
                     return;
                 }
                 return;

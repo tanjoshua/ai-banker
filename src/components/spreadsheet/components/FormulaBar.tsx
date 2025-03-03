@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { Input } from "@/components/ui/input";
 
 interface FormulaBarProps {
@@ -8,12 +8,12 @@ interface FormulaBarProps {
     onKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
-export function FormulaBar({
+export const FormulaBar = forwardRef<HTMLInputElement, FormulaBarProps>(({
     selectedCell,
     cellValue,
     onValueChange,
     onKeyDown
-}: FormulaBarProps) {
+}, ref) => {
     return (
         <div className="flex items-center h-10 bg-muted px-2 border-b">
             <div className="font-mono font-medium text-sm mr-2 w-14 flex-shrink-0">
@@ -22,6 +22,7 @@ export function FormulaBar({
 
             <div className="flex-1 flex items-center">
                 <Input
+                    ref={ref}
                     disabled={!onValueChange}
                     className="h-7"
                     value={cellValue?.toString() || ""}
@@ -33,4 +34,6 @@ export function FormulaBar({
             </div>
         </div>
     );
-} 
+});
+
+FormulaBar.displayName = "FormulaBar"; 
