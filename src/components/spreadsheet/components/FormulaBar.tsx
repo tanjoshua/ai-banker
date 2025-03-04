@@ -6,13 +6,17 @@ interface FormulaBarProps {
     cellValue: string | number | null | undefined;
     onValueChange?: (value: string) => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
+    onFocus?: () => void;
+    onMouseDown?: () => void;
 }
 
 export const FormulaBar = forwardRef<HTMLInputElement, FormulaBarProps>(({
     selectedCell,
     cellValue,
     onValueChange,
-    onKeyDown
+    onKeyDown,
+    onFocus,
+    onMouseDown
 }, ref) => {
     return (
         <div className="flex items-center h-10 bg-muted px-2 border-b">
@@ -28,6 +32,8 @@ export const FormulaBar = forwardRef<HTMLInputElement, FormulaBarProps>(({
                     value={cellValue?.toString() || ""}
                     onChange={e => onValueChange?.(e.target.value)}
                     onKeyDown={onKeyDown}
+                    onFocus={onFocus}
+                    onMouseDown={onMouseDown}
                     placeholder="Enter value or formula"
                     readOnly={!onValueChange}
                 />
