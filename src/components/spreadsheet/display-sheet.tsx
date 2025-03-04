@@ -355,6 +355,25 @@ export function DisplaySheet({
         });
     }
 
+    // First, add this method to handle clicks on cells
+    function handleCellClick(rowIndex: number, colIndex: number) {
+        // First check if we're currently editing in the formula bar
+        if (editingState.source === 'formulaBar' && editingState.cell) {
+            // Save the current edit before changing cells
+            saveEdit('none');
+
+            // Completely exit edit mode regardless of the source
+            setEditingState({ cell: null, value: "", source: null });
+        }
+
+        // Then select the new cell
+        setSelectedCell({
+            row: rowIndex,
+            col: colIndex,
+            coordinates: getCoordinates(colIndex, rowIndex)
+        });
+    }
+
     if (!cells) {
         return <div>Loading...</div>
     }
@@ -406,11 +425,7 @@ export function DisplaySheet({
                                         return (
                                             <td
                                                 key={colIndex}
-                                                onClick={() => setSelectedCell({
-                                                    row: rowIndex,
-                                                    col: colIndex,
-                                                    coordinates: getCoordinates(colIndex, rowIndex)
-                                                })}
+                                                onClick={() => handleCellClick(rowIndex, colIndex)}
                                                 onDoubleClick={() => {
                                                     setSelectedCell({
                                                         row: rowIndex,
