@@ -435,7 +435,7 @@ export function DisplaySheet({
                                                     startEditing();
                                                 }}
                                                 className={cn(
-                                                    "whitespace-nowrap relative cursor-default px-2 py-1",
+                                                    "whitespace-nowrap relative cursor-default px-2 py-1 h-8",
                                                     selectedCell?.row === rowIndex && selectedCell?.col === colIndex && "z-20 ring-2 ring-primary",
                                                     cell.className
                                                 )}
@@ -515,7 +515,7 @@ export function DisplaySheet({
                                                 ) : isEditingViaFormulaBar ? (
                                                     <div className="text-primary">{editingState.value}</div>
                                                 ) : (
-                                                    <div>
+                                                    <div className="min-h-[1.25rem] flex items-center">
                                                         {renderCellValue(cell)}
                                                     </div>
                                                 )}
