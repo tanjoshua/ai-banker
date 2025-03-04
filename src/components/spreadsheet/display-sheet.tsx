@@ -508,6 +508,44 @@ export function DisplaySheet({
                                                                 }
                                                             }
 
+                                                            // Add handling for arrow keys
+                                                            else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                                                e.preventDefault();
+
+                                                                // Get current position before saving edit
+                                                                const savedRow = selectedCell?.row ?? 0;
+                                                                const savedCol = selectedCell?.col ?? 0;
+
+                                                                // Save the current edit
+                                                                saveEdit('none'); // Use 'none' to prevent automatic movement
+
+                                                                // Calculate new position based on arrow key
+                                                                let newRow = savedRow;
+                                                                let newCol = savedCol;
+
+                                                                switch (e.key) {
+                                                                    case 'ArrowUp':
+                                                                        newRow = Math.max(0, savedRow - 1);
+                                                                        break;
+                                                                    case 'ArrowDown':
+                                                                        newRow = Math.min(cells.length - 1, savedRow + 1);
+                                                                        break;
+                                                                    case 'ArrowLeft':
+                                                                        newCol = Math.max(0, savedCol - 1);
+                                                                        break;
+                                                                    case 'ArrowRight':
+                                                                        newCol = Math.min(colCount - 1, savedCol + 1);
+                                                                        break;
+                                                                }
+
+                                                                // Move to the new cell
+                                                                setSelectedCell({
+                                                                    row: newRow,
+                                                                    col: newCol,
+                                                                    coordinates: getCoordinates(newCol, newRow)
+                                                                });
+                                                            }
+
                                                             // Prevent event bubbling to the table's handler
                                                             e.stopPropagation();
                                                         }}
