@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 export function PerplexityChat() {
-    const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    const { messages, input, handleInputChange, handleSubmit, isLoading, data, metadata, } = useChat({
         api: "/api/analyst/chat",
     });
 
@@ -20,7 +21,6 @@ export function PerplexityChat() {
             messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages]);
-
 
     return (
         <div className="flex flex-col h-[calc(100vh-180px)] max-w-3xl mx-auto">
@@ -53,9 +53,17 @@ export function PerplexityChat() {
                                             : "bg-muted rounded-tl-none"
                                     )}
                                 >
-                                    <p className="whitespace-pre-wrap text-sm">
-                                        {message.content}
-                                    </p>
+                                    {message.role === "user" ? (
+                                        <p className="whitespace-pre-wrap text-sm">
+                                            {message.content}
+                                        </p>
+                                    ) : (
+                                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                                            <ReactMarkdown>
+                                                {message.content}
+                                            </ReactMarkdown>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}

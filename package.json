@@ -24,7 +24,7 @@
     "ollama-ai-provider": "^1.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-markdown": "^9.0.3",
+    "react-markdown": "^10.0.1",
     "react-resizable-panels": "^2.1.7",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.0.1",
@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/hot-formula-parser": "^4.0.4",
     "@types/node": "^20",
     "@types/react": "^19",
