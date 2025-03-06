@@ -7,10 +7,12 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
 
     const result = streamText({
-        model: perplexity('sonar') as LanguageModelV1,
+        model: perplexity('sonar'),
         system: "You are an Investment Analyst, a financial expert chatbot that helps users analyze stocks, interpret market trends, and make informed investment decisions. Provide in-depth, data-driven analysis when answering queries.",
-        messages,
+        messages
     });
 
-    return result.toDataStreamResponse();
+    return result.toDataStreamResponse({
+        sendSources: true
+    });
 } 
