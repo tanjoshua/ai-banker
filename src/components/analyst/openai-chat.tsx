@@ -15,6 +15,7 @@ import { DCFParameters, dcfParametersSchema } from '../spreadsheet/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resizable';
 import { ScrollArea } from '../ui/scroll-area';
 import { DCF } from '../spreadsheet/dcf';
+import { motion, AnimatePresence } from "motion/react";
 
 // Type definitions
 type Source = {
@@ -127,43 +128,63 @@ const ToolInvocationRenderer = ({
                     // If model is active, show success message
                     if (isModelActive) {
                         return (
-                            <div className="my-2 p-3 rounded-md">
+                            <motion.div
+                                className="my-2 p-3 rounded-md"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                            >
                                 <p className="text-sm text-green-700 dark:text-green-400 font-medium">
                                     ✓ Spreadsheet created successfully
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-1">
                                     The spreadsheet model is now available in the panel on the right.
                                 </p>
-                            </div>
+                            </motion.div>
                         );
                     }
 
                     // Otherwise show the creation button
                     return (
-                        <div className="my-2">
+                        <motion.div
+                            className="my-2"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
                             <p className="mb-2">Spreadsheet model ready for creation.</p>
                             <div className="flex gap-2">
-                                <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={() => {
-                                        setSpreadsheetModel(dcfParametersSchema.parse(args.modelParameters));
-                                    }}
+                                <motion.div
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
                                 >
-                                    Create Spreadsheet
-                                </Button>
+                                    <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => {
+                                            setSpreadsheetModel(dcfParametersSchema.parse(args.modelParameters));
+                                        }}
+                                    >
+                                        Create Spreadsheet
+                                    </Button>
+                                </motion.div>
                             </div>
-                        </div>
+                        </motion.div>
                     );
 
                 case 'error':
                     return (
-                        <div className="text-sm my-2 p-3 bg-red-100 dark:bg-red-900/20 rounded-md">
+                        <motion.div
+                            className="text-sm my-2 p-3 bg-red-100 dark:bg-red-900/20 rounded-md"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.3 }}
+                        >
                             <p className="font-medium mb-1 text-red-600 dark:text-red-400">
                                 Error creating spreadsheet
                             </p>
                             <p className="text-xs">{error || "Unknown error occurred"}</p>
-                        </div>
+                        </motion.div>
                     );
 
                 default:
@@ -285,42 +306,17 @@ export function OpenAIChat() {
     }, [messages]);
 
     // Render different layouts based on whether a spreadsheet model exists
-    if (!spreadsheetModel) {
-        return (
-            <div className="h-dvh flex flex-col max-w-3xl mx-auto p-4">
-                <div className="flex-1 overflow-y-auto py-4">
-                    {messages.length === 0 ? (
-                        <EmptyState />
-                    ) : (
-                        <div className="space-y-6 py-4">
-                            {messages.map((message) => (
-                                <MessageBubble
-                                    key={message.id}
-                                    message={message}
-                                    setSpreadsheetModel={setSpreadsheetModel}
-                                    spreadsheetModel={spreadsheetModel}
-                                />
-                            ))}
-                            <div ref={messagesEndRef} />
-                        </div>
-                    )}
-                </div>
-
-                <ChatInput
-                    input={input}
-                    handleInputChange={handleInputChange}
-                    handleSubmit={handleSubmit}
-                    status={status}
-                />
-            </div>
-        );
-    }
-
     return (
-        <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel defaultSize={30}>
-                <div className="h-dvh flex-1 flex flex-col">
-                    <div className="flex-1 overflow-y-auto p-2 rounded-lg">
+        <AnimatePresence mode="wait">
+            {!spreadsheetModel ? (
+                <motion.div
+                    key="chat-only"
+                    className="h-dvh flex flex-col max-w-3xl mx-auto p-4"
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <div className="flex-1 overflow-y-auto py-4">
                         {messages.length === 0 ? (
                             <EmptyState />
                         ) : (
@@ -338,30 +334,83 @@ export function OpenAIChat() {
                         )}
                     </div>
 
-                    <div className="px-2 pb-2">
-                        <ChatInput
-                            input={input}
-                            handleInputChange={handleInputChange}
-                            handleSubmit={handleSubmit}
-                            status={status}
-                        />
-                    </div>
-                </div>
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={70}>
-                <DCF
-                    ticker={'MCD'}
-                    params={{
-                        revenueGrowth: spreadsheetModel.revenueGrowth,
-                        cogsMargin: spreadsheetModel.cogsMargin,
-                        sgaMargin: spreadsheetModel.sgaMargin,
-                        daCapex: spreadsheetModel.daCapex,
-                        taxRate: spreadsheetModel.taxRate,
-                        salesIntensity: spreadsheetModel.salesIntensity,
+                    <ChatInput
+                        input={input}
+                        handleInputChange={handleInputChange}
+                        handleSubmit={handleSubmit}
+                        status={status}
+                    />
+                </motion.div>
+            ) : (
+                <motion.div
+                    key="chat-with-spreadsheet"
+                    className="h-dvh"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                        duration: 0.4,
+                        ease: "easeOut"
                     }}
-                />
-            </ResizablePanel>
-        </ResizablePanelGroup>
+                >
+                    <ResizablePanelGroup direction="horizontal">
+                        <ResizablePanel defaultSize={30}>
+                            <div className="h-dvh flex-1 flex flex-col">
+                                <div className="flex-1 overflow-y-auto p-2 rounded-lg">
+                                    {messages.length === 0 ? (
+                                        <EmptyState />
+                                    ) : (
+                                        <div className="space-y-6 py-4">
+                                            {messages.map((message) => (
+                                                <MessageBubble
+                                                    key={message.id}
+                                                    message={message}
+                                                    setSpreadsheetModel={setSpreadsheetModel}
+                                                    spreadsheetModel={spreadsheetModel}
+                                                />
+                                            ))}
+                                            <div ref={messagesEndRef} />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="px-2 pb-2">
+                                    <ChatInput
+                                        input={input}
+                                        handleInputChange={handleInputChange}
+                                        handleSubmit={handleSubmit}
+                                        status={status}
+                                    />
+                                </div>
+                            </div>
+                        </ResizablePanel>
+                        <ResizableHandle />
+                        <ResizablePanel defaultSize={70}>
+                            <motion.div
+                                initial={{ opacity: 0, x: 50 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{
+                                    duration: 0.5,
+                                    delay: 0.2,
+                                    ease: "easeOut"
+                                }}
+                                className="h-full"
+                            >
+                                <DCF
+                                    ticker={'MCD'}
+                                    params={{
+                                        revenueGrowth: spreadsheetModel.revenueGrowth,
+                                        cogsMargin: spreadsheetModel.cogsMargin,
+                                        sgaMargin: spreadsheetModel.sgaMargin,
+                                        daCapex: spreadsheetModel.daCapex,
+                                        taxRate: spreadsheetModel.taxRate,
+                                        salesIntensity: spreadsheetModel.salesIntensity,
+                                    }}
+                                />
+                            </motion.div>
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 } 
