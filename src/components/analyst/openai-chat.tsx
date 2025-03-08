@@ -116,7 +116,7 @@ const ToolInvocationRenderer = ({
     setSpreadsheetModel,
     spreadsheetModel
 }: ToolInvocationProps) => {
-    const { toolName, state, args, error } = toolInvocation;
+    const { toolName, state, args, error, result } = toolInvocation;
 
     // Check if this is the active model
     const isModelActive = spreadsheetModel !== null;
@@ -125,68 +125,48 @@ const ToolInvocationRenderer = ({
         case 'createSpreadsheetModel':
             switch (state) {
                 case 'call':
-                    // If model is active, show success message
-                    if (isModelActive) {
-                        return (
-                            <motion.div
-                                className="my-2 p-3 rounded-md"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                <p className="text-sm text-green-700 dark:text-green-400 font-medium">
-                                    ✓ Spreadsheet created successfully
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    The spreadsheet model is now available in the panel on the right.
-                                </p>
-                            </motion.div>
-                        );
-                    }
-
-                    // Otherwise show the creation button
+                    // This will still be shown briefly before the result comes back
                     return (
                         <motion.div
-                            className="my-2"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            className="my-2 p-3 rounded-md bg-muted"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <div className="space-y-4">
-                                <div className="rounded-lg border p-4">
-                                    <h4 className="font-medium mb-2">Model Parameters</h4>
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-2 gap-2 text-sm">
-                                            <div>Revenue Growth:</div>
-                                            <div className="text-right">{(args.modelParameters.revenueGrowth * 100).toFixed(1)}%</div>
-                                            <div>COGS Margin:</div>
-                                            <div className="text-right">{(args.modelParameters.cogsMargin * 100).toFixed(1)}%</div>
-                                            <div>SG&A Margin:</div>
-                                            <div className="text-right">{(args.modelParameters.sgaMargin * 100).toFixed(1)}%</div>
-                                            <div>D&A as % of CAPEX:</div>
-                                            <div className="text-right">{(args.modelParameters.daCapex * 100).toFixed(1)}%</div>
-                                            <div>Tax Rate:</div>
-                                            <div className="text-right">{(args.modelParameters.taxRate * 100).toFixed(1)}%</div>
-                                            <div>CAPEX as % of Revenue:</div>
-                                            <div className="text-right">{(args.modelParameters.salesIntensity * 100).toFixed(1)}%</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <motion.div
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <Button
-                                            variant="default"
-                                            size="sm"
-                                            onClick={() => {
-                                                setSpreadsheetModel(dcfParametersSchema.parse(args.modelParameters));
-                                            }}
-                                        >
-                                            Create Spreadsheet
-                                        </Button>
-                                    </motion.div>
+                            <p className="text-sm font-medium">
+                                Creating spreadsheet model...
+                            </p>
+                        </motion.div>
+                    );
+
+                case 'result':
+                    return (
+                        <motion.div
+                            className="border rounded p-2"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <p className="text-sm text-green-700 font-medium">
+                                ✓ Spreadsheet created successfully
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                The spreadsheet model is now available in the panel on the right.
+                            </p>
+                            <div className="mt-3 space-y-2">
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>Revenue Growth:</div>
+                                    <div className="text-right">{(args.modelParameters.revenueGrowth * 100).toFixed(1)}%</div>
+                                    <div>COGS Margin:</div>
+                                    <div className="text-right">{(args.modelParameters.cogsMargin * 100).toFixed(1)}%</div>
+                                    <div>SG&A Margin:</div>
+                                    <div className="text-right">{(args.modelParameters.sgaMargin * 100).toFixed(1)}%</div>
+                                    <div>D&A as % of CAPEX:</div>
+                                    <div className="text-right">{(args.modelParameters.daCapex * 100).toFixed(1)}%</div>
+                                    <div>Tax Rate:</div>
+                                    <div className="text-right">{(args.modelParameters.taxRate * 100).toFixed(1)}%</div>
+                                    <div>CAPEX as % of Revenue:</div>
+                                    <div className="text-right">{(args.modelParameters.salesIntensity * 100).toFixed(1)}%</div>
                                 </div>
                             </div>
                         </motion.div>
@@ -304,13 +284,29 @@ const MessageBubble = ({ message, setSpreadsheetModel, spreadsheetModel }: Messa
 
 // Main component
 export function OpenAIChat() {
-    const { messages, input, handleInputChange, handleSubmit, status, error } = useChat({
-        api: "/api/analyst/openai",
-        experimental_throttle: 50,
-        maxSteps: 5
-    });
     const [spreadsheetModel, setSpreadsheetModel] = useState<DCFParameters | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const { messages, input, handleInputChange, handleSubmit, status, error } = useChat({
+        api: "/api/analyst/openai",
+        maxSteps: 5,
+        async onToolCall({ toolCall }) {
+            if (toolCall.toolName === 'createSpreadsheetModel') {
+                try {
+                    // Type assert args first or create a type guard
+                    const args = toolCall.args as { modelParameters: unknown };
+                    // Then validate the model parameters with your schema
+                    const modelParameters = dcfParametersSchema.parse(args.modelParameters);
+                    setSpreadsheetModel(modelParameters);
+
+                    return "Spreadsheet model created successfully";
+                } catch (e) {
+                    console.error("Error creating spreadsheet:", e);
+                    return "Failed to create spreadsheet: " + (e instanceof Error ? e.message : String(e));
+                }
+            }
+        },
+    });
 
     useEffect(() => {
         if (error) {
