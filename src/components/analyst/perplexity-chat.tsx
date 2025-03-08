@@ -20,12 +20,6 @@ type Source = {
     title?: string;
 };
 
-type MessagePart = {
-    type: 'text' | 'source';
-    text?: string;
-    source?: Source;
-};
-
 
 // Citation component for displaying individual citation markers
 const Citation = ({ sourceIndex, source }: { sourceIndex: number; source: Source }) => {
@@ -86,38 +80,111 @@ const UserMessage = ({ content }: { content: string }) => (
     <p className="whitespace-pre-wrap text-sm">{content}</p>
 );
 
-// Assistant message component that handles both regular and parts-based messages
+// Assistant message component that handles text, parts-based messages, and tool invocations
 const AssistantMessage = ({ message }: { message: UIMessage }) => {
-    if (message.parts) {
-        const sources = message.parts
-            .filter(part => part.type === 'source')
-            .map(part => part.source!);
-
-        const textParts = message.parts
-            .filter(part => part.type === 'text');
-
-        return (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-                {textParts.map((part, index) => (
-                    <div key={index}>
-                        <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={createMarkdownComponents(sources)}
-                            rehypePlugins={[rehypeRaw]}
-                        >
-                            {processCitations(part.text!, sources)}
-                        </ReactMarkdown>
-                    </div>
-                ))}
-
-                <SourcesList sources={sources} />
-            </div>
-        );
-    }
+    // Extract all sources (if any) from message parts
+    const sources = message.parts?.filter(part => part.type === 'source')
+        .map(part => part.source!) || [];
 
     return (
         <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            {/* Render message content differently based on whether it uses parts */}
+            {message.parts ? (
+                <>
+                    {/* Process text parts */}
+                    {message.parts.filter(part => part.type === 'text').map((part, index) => (
+                        <div key={`text-${index}`}>
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={createMarkdownComponents(sources)}
+                                rehypePlugins={[rehypeRaw]}
+                            >
+                                {processCitations(part.text!, sources)}
+                            </ReactMarkdown>
+                        </div>
+                    ))}
+
+                    {/* Handle tool invocation parts */}
+                    {message.parts.filter(part => part.type === 'tool-invocation').map((part, index) => {
+                        const toolInvocation = part.toolInvocation;
+                        const callId = toolInvocation.toolCallId;
+
+                        return (
+                            <div key={`tool-${callId}`} className="my-3 p-3 border rounded-md bg-muted/50">
+                                {renderToolInvocation(toolInvocation)}
+                            </div>
+                        );
+                    })}
+
+                    {/* Display sources list if available */}
+                    {sources.length > 0 && <SourcesList sources={sources} />}
+                </>
+            ) : (
+                // Fall back to regular markdown rendering for simple content
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+            )}
+        </div>
+    );
+};
+
+// Function to render different tool invocations based on their state and name
+const renderToolInvocation = (toolInvocation: any) => {
+    const { toolName, state, args, result } = toolInvocation;
+
+    // Show different UI based on tool invocation state
+    switch (state) {
+        case 'partial-call':
+            return (
+                <div className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        <p>Processing {toolName}...</p>
+                    </div>
+                </div>
+            );
+
+        case 'call':
+            return (
+                <div className="text-sm">
+                    <p className="font-medium mb-1">Using {toolName}</p>
+                    {args && Object.keys(args).length > 0 && (
+                        <div className="text-xs bg-background p-2 rounded overflow-x-auto">
+                            <pre className="text-muted-foreground">{JSON.stringify(args, null, 2)}</pre>
+                        </div>
+                    )}
+                </div>
+            );
+
+        case 'result':
+            return (
+                <div className="text-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-3 w-3 bg-green-500 rounded-full" />
+                        <p className="font-medium">{toolName} result</p>
+                    </div>
+
+                    {renderToolResult(toolName, result)}
+                </div>
+            );
+
+        default:
+            return <p className="text-sm text-muted-foreground">Unknown tool state</p>;
+    }
+};
+
+// Function to render tool results based on the tool type
+const renderToolResult = (toolName: string, result: any) => {
+    // You can customize rendering for different tools here
+    // For example, if you have a chart tool, weather tool, etc.
+
+    // Generic result display as fallback
+    return (
+        <div className="bg-background p-2 rounded overflow-x-auto">
+            {typeof result === 'object' ? (
+                <pre className="text-xs">{JSON.stringify(result, null, 2)}</pre>
+            ) : (
+                <p>{result}</p>
+            )}
         </div>
     );
 };
