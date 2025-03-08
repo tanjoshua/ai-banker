@@ -152,22 +152,42 @@ const ToolInvocationRenderer = ({
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <p className="mb-2">Spreadsheet model ready for creation.</p>
-                            <div className="flex gap-2">
-                                <motion.div
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    <Button
-                                        variant="default"
-                                        size="sm"
-                                        onClick={() => {
-                                            setSpreadsheetModel(dcfParametersSchema.parse(args.modelParameters));
-                                        }}
+                            <div className="space-y-4">
+                                <div className="rounded-lg border p-4">
+                                    <h4 className="font-medium mb-2">Model Parameters</h4>
+                                    <div className="space-y-2">
+                                        <div className="grid grid-cols-2 gap-2 text-sm">
+                                            <div>Revenue Growth:</div>
+                                            <div className="text-right">{(args.modelParameters.revenueGrowth * 100).toFixed(1)}%</div>
+                                            <div>COGS Margin:</div>
+                                            <div className="text-right">{(args.modelParameters.cogsMargin * 100).toFixed(1)}%</div>
+                                            <div>SG&A Margin:</div>
+                                            <div className="text-right">{(args.modelParameters.sgaMargin * 100).toFixed(1)}%</div>
+                                            <div>D&A as % of CAPEX:</div>
+                                            <div className="text-right">{(args.modelParameters.daCapex * 100).toFixed(1)}%</div>
+                                            <div>Tax Rate:</div>
+                                            <div className="text-right">{(args.modelParameters.taxRate * 100).toFixed(1)}%</div>
+                                            <div>CAPEX as % of Revenue:</div>
+                                            <div className="text-right">{(args.modelParameters.salesIntensity * 100).toFixed(1)}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <motion.div
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                     >
-                                        Create Spreadsheet
-                                    </Button>
-                                </motion.div>
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSpreadsheetModel(dcfParametersSchema.parse(args.modelParameters));
+                                            }}
+                                        >
+                                            Create Spreadsheet
+                                        </Button>
+                                    </motion.div>
+                                </div>
                             </div>
                         </motion.div>
                     );

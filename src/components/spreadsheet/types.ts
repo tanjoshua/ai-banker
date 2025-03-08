@@ -18,12 +18,12 @@ export type Cell = {
 import { z } from "zod";
 
 export const dcfParametersSchema = z.object({
-    revenueGrowth: z.number().describe("Estimated revenue growth rate for the future of the company."),
-    cogsMargin: z.number().describe("Estimated cost of goods sold margin for the future of the company. Calculated by cost of goods sold over revenue."),
-    sgaMargin: z.number().describe("Estimated SG&A margin for the future of the company. Calculated by SG&A expense sold over revenue."),
-    daCapex: z.number().describe("Estimated percentage of depreciation and amortization out of capital expenditures."),
-    taxRate: z.number().describe("Estimated effective tax rate for the future of the company."),
-    salesIntensity: z.number().describe("Estimated percentage of capital expenditures out of revenue."),
+    revenueGrowth: z.number().describe("Estimated revenue growth rate as a decimal."),
+    cogsMargin: z.number().describe("Estimated cost of goods sold margin as a decimal. Calculated by cost of goods sold over revenue."),
+    sgaMargin: z.number().describe("Estimated SG&A margin as a decimal. Calculated by SG&A expense over revenue."),
+    daCapex: z.number().describe("Estimated depreciation and amortization proportion of capital expenditures as a decimal."),
+    taxRate: z.number().describe("Estimated effective tax rate as a decimal."),
+    salesIntensity: z.number().describe("Estimated capital expenditures as a proportion of revenue, expressed as a decimal."),
     // perpetuityGrowthRate: z.number().describe("The rate at which revenue is expected to grow at every year if we assume that the company continues to operate forever"),
     // wacc: z.number().describe("Weighted Average Cost of Capital"),
 });
