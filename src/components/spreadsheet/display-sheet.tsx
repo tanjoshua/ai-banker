@@ -116,35 +116,25 @@ export function DisplaySheet({
 
         setCells(updatedCells);
 
-        // Handle editing state and focus
-        const isTransitioningToFormulaBar = editingState.source === 'formulaBar';
+        // Always end editing state regardless of source
+        setEditingState({ cell: null, value: "", source: null });
 
-        if (!isTransitioningToFormulaBar) {
-            // End editing completely
-            setEditingState({ cell: null, value: "", source: null });
+        // Move to next cell (if needed) - do this for both cell and formula bar edits
+        if (moveDirection === 'down' && selectedCell && cells.length > 0) {
+            const newRow = selectedCell.row >= cells.length - 1
+                ? cells.length - 1
+                : selectedCell.row + 1;
 
-            // Move to next cell (if needed)
-            if (moveDirection === 'down' && selectedCell && cells.length > 0) {
-                const newRow = selectedCell.row >= cells.length - 1
-                    ? cells.length - 1
-                    : selectedCell.row + 1;
+            setSelectedCell({
+                row: newRow,
+                col: selectedCell.col,
+                coordinates: getCoordinates(selectedCell.col, newRow)
+            });
+        }
 
-                setSelectedCell({
-                    row: newRow,
-                    col: selectedCell.col,
-                    coordinates: getCoordinates(selectedCell.col, newRow)
-                });
-            }
-
-            // Focus the table
-            if (tableRef.current) {
-                tableRef.current.focus();
-            }
-        } else {
-            // When in formula bar mode, ensure formula bar has focus
-            if (formulaBarRef.current) {
-                formulaBarRef.current.focus();
-            }
+        // Focus the table
+        if (tableRef.current) {
+            tableRef.current.focus();
         }
     };
 
