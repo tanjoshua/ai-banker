@@ -2,18 +2,8 @@
 import { cn } from "@/lib/utils";
 import { SpreadSheet, getCoordinates } from "./sheet";
 import { getHardcodedData, LineItem } from "./mockData";
-import { Cell, CellFormat } from "./types";
+import { Cell, CellFormat, DCFParameters } from "./types";
 import { useState } from "react";
-
-
-interface DCFParameters {
-    revenueGrowth: number;
-    cogsMargin: number;
-    sgaMargin: number;
-    daCapex: number;
-    taxRate: number;
-    salesIntensity: number;
-}
 
 export function generateDCFCells(ticker: string, params: DCFParameters) {
     const currentYear = 2024;
