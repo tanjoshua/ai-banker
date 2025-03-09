@@ -409,7 +409,7 @@ export function OpenAIChat() {
                                     delay: 0.2,
                                     ease: "easeOut"
                                 }}
-                                className="h-full"
+                                className="h-dvh flex flex-col"
                             >
                                 <DCF
                                     ticker={'MCD'}
