@@ -96,9 +96,16 @@ export function DisplaySheet({
             row.map((cell, colIndex) => {
                 if (rowIndex === cellToUpdate.row && colIndex === cellToUpdate.col) {
                     let newValue: string | number = editingState.value;
-                    if (cell.format === CellFormat.Number && !editingState.value.startsWith('=')) {
+
+                    // Convert to number if it's a valid number and not a formula
+                    if (!editingState.value.startsWith('=')) {
+                        // Try to parse the value as a number
                         const number = parseFloat(editingState.value);
-                        if (!isNaN(number)) {
+                        // Check if it's a valid number and if the string representation
+                        // of the parsed number matches the original input (avoids issues with partial numbers)
+                        if (!isNaN(number) &&
+                            (editingState.value === number.toString() ||
+                                editingState.value.trim() === number.toString())) {
                             newValue = number;
                         }
                     }
