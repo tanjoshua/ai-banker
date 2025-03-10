@@ -9,13 +9,14 @@ import { Send, ExternalLink } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { UIMessage } from 'ai';
+import { ToolInvocation, UIMessage } from 'ai';
 import { toast } from 'sonner';
-import { DCFParameters, dcfParametersSchema } from '../spreadsheet/types';
+import { Cell, RenderSpreadsheetCell } from '../spreadsheet/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resizable';
 import { ScrollArea } from '../ui/scroll-area';
 import { DCF } from '../spreadsheet/dcf';
 import { motion, AnimatePresence } from "motion/react";
+import { SpreadSheet } from '../spreadsheet/sheet';
 
 // Type definitions
 type Source = {
@@ -106,89 +107,55 @@ const ChatInput = ({
 
 // ToolInvocationRenderer component with context
 type ToolInvocationProps = {
-    toolInvocation: any;
-    setSpreadsheetModel: (model: DCFParameters) => void;
-    spreadsheetModel: DCFParameters | null;
+    toolInvocation: ToolInvocation;
 };
 
 const ToolInvocationRenderer = ({
     toolInvocation,
-    setSpreadsheetModel,
-    spreadsheetModel
 }: ToolInvocationProps) => {
-    const { toolName, state, args, error, result } = toolInvocation;
-
-    // Check if this is the active model
-    const isModelActive = spreadsheetModel !== null;
+    const { toolName, state, args } = toolInvocation;
 
     switch (toolName) {
-        case 'createSpreadsheetModel':
+        case "getSpreadsheetTemplate":
             switch (state) {
-                case 'call':
-                    // This will still be shown briefly before the result comes back
+                case "partial-call":
+                case "call":
                     return (
-                        <motion.div
-                            className="my-2 p-3 rounded-md bg-muted"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <p className="text-sm font-medium">
-                                Creating spreadsheet model...
-                            </p>
-                        </motion.div>
+                        <div className="my-2 flex items-center gap-2 p-3 rounded-md bg-muted">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                            <p className="text-sm font-medium">Fetching spreadsheet template...</p>
+                        </div>
+                    );
+                case 'result':
+                    return <div className="my-2 border rounded p-2">
+                        <p className="text-sm text-green-700 font-medium">
+                            ✓ Template fetched successfully
+                        </p>
+                    </div>
+            }
+
+        case "renderSpreadsheet":
+            switch (state) {
+                case 'partial-call':
+                case 'call':
+                    return (
+                        <div className="my-2 flex items-center gap-2 p-3 rounded-md bg-muted">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                            <p className="text-sm font-medium">Creating spreadsheet model...</p>
+                        </div>
                     );
 
                 case 'result':
                     return (
-                        <motion.div
-                            className="border rounded p-2"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                        >
+                        <div className="my-2 border rounded p-2">
                             <p className="text-sm text-green-700 font-medium">
                                 ✓ Spreadsheet created successfully
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 The spreadsheet model is now available in the panel on the right.
                             </p>
-                            <div className="mt-3 space-y-2">
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div>Revenue Growth:</div>
-                                    <div className="text-right">{(args.modelParameters.revenueGrowth * 100).toFixed(1)}%</div>
-                                    <div>COGS Margin:</div>
-                                    <div className="text-right">{(args.modelParameters.cogsMargin * 100).toFixed(1)}%</div>
-                                    <div>SG&A Margin:</div>
-                                    <div className="text-right">{(args.modelParameters.sgaMargin * 100).toFixed(1)}%</div>
-                                    <div>D&A as % of CAPEX:</div>
-                                    <div className="text-right">{(args.modelParameters.daCapex * 100).toFixed(1)}%</div>
-                                    <div>Tax Rate:</div>
-                                    <div className="text-right">{(args.modelParameters.taxRate * 100).toFixed(1)}%</div>
-                                    <div>CAPEX as % of Revenue:</div>
-                                    <div className="text-right">{(args.modelParameters.salesIntensity * 100).toFixed(1)}%</div>
-                                </div>
-                            </div>
-                        </motion.div>
+                        </div>
                     );
-
-                case 'error':
-                    return (
-                        <motion.div
-                            className="text-sm my-2 p-3 bg-red-100 dark:bg-red-900/20 rounded-md"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <p className="font-medium mb-1 text-red-600 dark:text-red-400">
-                                Error creating spreadsheet
-                            </p>
-                            <p className="text-xs">{error || "Unknown error occurred"}</p>
-                        </motion.div>
-                    );
-
-                default:
-                    return null;
             }
         default:
             return null;
@@ -198,14 +165,10 @@ const ToolInvocationRenderer = ({
 // AssistantMessage component
 type AssistantMessageProps = {
     message: UIMessage;
-    setSpreadsheetModel: (model: DCFParameters) => void;
-    spreadsheetModel: DCFParameters | null;
 };
 
 const AssistantMessage = ({
     message,
-    setSpreadsheetModel,
-    spreadsheetModel
 }: AssistantMessageProps) => {
     // Extract all sources (if any) from message parts
     const sources = message.parts?.filter(part => part.type === 'source')
@@ -222,8 +185,6 @@ const AssistantMessage = ({
                             <div key={index}>
                                 <ToolInvocationRenderer
                                     toolInvocation={part.toolInvocation}
-                                    setSpreadsheetModel={setSpreadsheetModel}
-                                    spreadsheetModel={spreadsheetModel}
                                 />
                             </div>
                         );
@@ -244,11 +205,9 @@ const AssistantMessage = ({
 // MessageBubble Component
 type MessageBubbleProps = {
     message: UIMessage;
-    setSpreadsheetModel: (model: DCFParameters) => void;
-    spreadsheetModel: DCFParameters | null;
 };
 
-const MessageBubble = ({ message, setSpreadsheetModel, spreadsheetModel }: MessageBubbleProps) => {
+const MessageBubble = ({ message }: MessageBubbleProps) => {
     if (message.role === 'data' || message.role === 'system') {
         return null;
     }
@@ -273,8 +232,6 @@ const MessageBubble = ({ message, setSpreadsheetModel, spreadsheetModel }: Messa
                 ) : (
                     <AssistantMessage
                         message={message}
-                        setSpreadsheetModel={setSpreadsheetModel}
-                        spreadsheetModel={spreadsheetModel}
                     />
                 )}
             </div>
@@ -284,28 +241,33 @@ const MessageBubble = ({ message, setSpreadsheetModel, spreadsheetModel }: Messa
 
 // Main component
 export function OpenAIChat() {
-    const [spreadsheetModel, setSpreadsheetModel] = useState<DCFParameters | null>(null);
+    const [spreadsheetCells, setSpreadsheetCells] = useState<Cell[][] | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const { messages, input, handleInputChange, handleSubmit, status, error } = useChat({
         api: "/api/analyst/openai",
         maxSteps: 5,
         async onToolCall({ toolCall }) {
-            if (toolCall.toolName === 'createSpreadsheetModel') {
-                try {
-                    // Type assert args first or create a type guard
-                    const args = toolCall.args as { modelParameters: unknown };
-                    // Then validate the model parameters with your schema
-                    const modelParameters = dcfParametersSchema.parse(args.modelParameters);
-                    setSpreadsheetModel(modelParameters);
+            switch (toolCall.toolName) {
+                case 'renderSpreadsheet':
+                    try {
+                        // Type assert args first or create a type guard
+                        const args = toolCall.args as { cells: RenderSpreadsheetCell[][] };
+                        // Then validate the model parameters with your schema
 
-                    return "Spreadsheet model created successfully";
-                } catch (e) {
-                    console.error("Error creating spreadsheet:", e);
-                    return "Failed to create spreadsheet: " + (e instanceof Error ? e.message : String(e));
-                }
+                        setSpreadsheetCells(args.cells.map(row => row.map(cell => ({
+                            format: cell.format,
+                            value: cell.value,
+                            className: cell.className
+                        }))));
+
+                        return "Spreadsheet model created successfully";
+                    } catch (e) {
+                        console.error("Error creating spreadsheet:", e);
+                        return "Failed to create spreadsheet: " + (e instanceof Error ? e.message : String(e));
+                    }
             }
-        },
+        }
     });
 
     useEffect(() => {
@@ -324,7 +286,7 @@ export function OpenAIChat() {
     // Render different layouts based on whether a spreadsheet model exists
     return (
         <AnimatePresence mode="wait">
-            {!spreadsheetModel ? (
+            {!spreadsheetCells ? (
                 <motion.div
                     key="chat-only"
                     className="h-dvh flex flex-col max-w-3xl mx-auto p-4"
@@ -341,8 +303,6 @@ export function OpenAIChat() {
                                     <MessageBubble
                                         key={message.id}
                                         message={message}
-                                        setSpreadsheetModel={setSpreadsheetModel}
-                                        spreadsheetModel={spreadsheetModel}
                                     />
                                 ))}
                                 <div ref={messagesEndRef} />
@@ -380,8 +340,6 @@ export function OpenAIChat() {
                                                 <MessageBubble
                                                     key={message.id}
                                                     message={message}
-                                                    setSpreadsheetModel={setSpreadsheetModel}
-                                                    spreadsheetModel={spreadsheetModel}
                                                 />
                                             ))}
                                             <div ref={messagesEndRef} />
@@ -411,16 +369,9 @@ export function OpenAIChat() {
                                 }}
                                 className="h-dvh flex flex-col"
                             >
-                                <DCF
-                                    ticker={'MCD'}
-                                    params={{
-                                        revenueGrowth: spreadsheetModel.revenueGrowth,
-                                        cogsMargin: spreadsheetModel.cogsMargin,
-                                        sgaMargin: spreadsheetModel.sgaMargin,
-                                        daCapex: spreadsheetModel.daCapex,
-                                        taxRate: spreadsheetModel.taxRate,
-                                        salesIntensity: spreadsheetModel.salesIntensity,
-                                    }}
+                                <SpreadSheet
+                                    cells={spreadsheetCells}
+                                    setCells={setSpreadsheetCells}
                                 />
                             </motion.div>
                         </ResizablePanel>

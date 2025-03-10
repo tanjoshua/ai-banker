@@ -29,3 +29,11 @@ export const dcfParametersSchema = z.object({
 });
 
 export type DCFParameters = z.infer<typeof dcfParametersSchema>;
+
+export const renderSpreadsheetCell = z.object({
+    format: z.nativeEnum(CellFormat),
+    value: z.union([z.string(), z.number()]),
+    className: z.string().optional().describe("tailwind classes to style the cell"),
+});
+
+export type RenderSpreadsheetCell = z.infer<typeof renderSpreadsheetCell>;
