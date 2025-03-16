@@ -2,16 +2,16 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+```
+
+Then, run the development server:
+
+```bash
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -19,6 +19,38 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Database Setup
+
+This project uses Drizzle ORM with PostgreSQL (via Neon Database).
+
+1. **Set up your database URL in your environment**
+
+   Refer to the `.env.example` file and create a `.env.local` file in the root of your project with your database URL:
+
+   ```
+   DATABASE_URL=postgresql://your-connection-string
+   ```
+
+2. **Apply migrations to set up the database schema**
+
+   ```bash
+   pnpm run db:push
+   ```
+
+3. **After making schema changes**
+
+   When you modify `src/lib/db/schema.ts`, run:
+   ```bash
+   pnpm run db:generate
+   pnpm run db:push
+   ```
+
+4. **Explore your database**
+
+   ```bash
+   pnpm run db:studio
+   ```
 
 ## Learn More
 
