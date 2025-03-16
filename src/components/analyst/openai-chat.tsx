@@ -7,14 +7,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Send, ExternalLink } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import { ToolInvocation, UIMessage } from 'ai';
 import { toast } from 'sonner';
 import { Cell, RenderSpreadsheetCell } from '../spreadsheet/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resizable';
-import { ScrollArea } from '../ui/scroll-area';
-import { DCF } from '../spreadsheet/dcf';
 import { motion, AnimatePresence } from "motion/react";
 import { SpreadSheet } from '../spreadsheet/sheet';
 
