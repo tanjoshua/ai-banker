@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { companies, type Company } from "@/lib/db/schema";
+import { companies } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,7 +19,6 @@ async function addCompany(formData: FormData) {
     }
 
     try {
-        // @ts-ignore - Ignoring TypeScript errors for Drizzle ORM
         await db.insert(companies).values({
             name,
             ticker: ticker.toUpperCase(),
@@ -42,7 +41,6 @@ async function deleteCompany(formData: FormData) {
     }
 
     try {
-        // @ts-ignore - Ignoring TypeScript errors for Drizzle ORM
         await db.delete(companies).where(eq(companies.id, id));
     } catch (error) {
         console.error("Error deleting company:", error);
@@ -52,15 +50,8 @@ async function deleteCompany(formData: FormData) {
 }
 
 export default async function CompaniesPage() {
-    // Fetch all companies with proper typing
-    let allCompanies: Company[] = [];
+    const allCompanies = await db.select().from(companies);
 
-    try {
-        // @ts-ignore - Ignoring TypeScript errors for Drizzle ORM
-        allCompanies = await db.select().from(companies);
-    } catch (error) {
-        console.error("Error fetching companies:", error);
-    }
 
     return (
         <div className="max-w-6xl mx-auto p-6">
