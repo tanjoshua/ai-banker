@@ -1,17 +1,32 @@
 'use client';
 import { cn } from "@/lib/utils";
 import { SpreadSheet, getCoordinates } from "./sheet";
-import { getHardcodedData, LineItem } from "./mockData";
+import { getHardcodedData, LineItem, FinancialStatementData } from "./mockData";
 import { Cell, CellFormat, DCFParameters } from "./types";
 import { useState } from "react";
 
-export function generateDCFCells(ticker: string, params: DCFParameters) {
-    const currentYear = 2024;
-    const startYear = -8;
-    const endYear = 10;
+// Type for historical data by year
+export type HistoricalData = {
+    [year: number]: FinancialStatementData;
+};
 
-    const cells: Cell[][] = Array.from({ length: 30 }, () => Array(Math.abs(endYear - startYear) + 1).fill({ format: CellFormat.String, value: "" } as Cell));
-
+/**
+ * Creates DCF spreadsheet cells
+ * @param historicalYears Number of historical years
+ * @param futureYears Number of future years
+ * @param currentYear The current year (base year)
+ * @param historicalData Historical financial data by year
+ * @param params DCF parameters for future projections
+ * @returns Cell matrix for the DCF model
+ */
+export function createDCFCells(
+    historicalYears: number,
+    futureYears: number,
+    currentYear: number,
+    historicalData: HistoricalData,
+    params: DCFParameters
+): Cell[][] {
+    // Define row indices for different line items
     const revenueRow = 1;
     const revenueGrowthRow = revenueRow + 1;
     const cogsRow = revenueGrowthRow + 1;
@@ -35,147 +50,73 @@ export function generateDCFCells(ticker: string, params: DCFParameters) {
     const nopatMarginRow = nopatNwcDeltaRow + 1;
     const ufcfRow = nopatMarginRow + 2;
 
+    // Calculate total columns and create empty cells matrix
+    const totalColumns = historicalYears + futureYears + 1; // +1 for column headers
+    const cells: Cell[][] = Array.from({ length: 30 }, () =>
+        Array(totalColumns).fill({ format: CellFormat.String, value: "" } as Cell)
+    );
 
-    cells[revenueRow][0] = {
-        format: CellFormat.String,
-        value: "Revenue",
-        className: "font-semibold"
-    }
-    cells[revenueGrowthRow][0] = {
-        format: CellFormat.String,
-        value: "% growth",
-        className: "italic"
-    }
-    cells[cogsRow][0] = {
-        format: CellFormat.String,
-        value: "(-) COGS",
-        className: ""
-    }
-    cells[cogsMarginRow][0] = {
-        format: CellFormat.String,
-        value: "  % margin",
-        className: "italic"
-    }
-    cells[grossProfitRow][0] = {
-        format: CellFormat.String,
-        value: "Gross Profit",
-        className: "font-semibold"
-    }
-    cells[sgaRow][0] = {
-        format: CellFormat.String,
-        value: "(-) SG&A",
-        className: "font-semibold"
-    }
-    cells[sgaMarginRow][0] = {
-        format: CellFormat.String,
-        value: "  % margin",
-        className: "italic"
-    }
-    cells[daRow][0] = {
-        format: CellFormat.String,
-        value: "(+) D&A",
-        className: ""
-    }
-    cells[daCapexRow][0] = {
-        format: CellFormat.String,
-        value: "  % capex",
-        className: "italic"
-    }
-    cells[ebitdaRow][0] = {
-        format: CellFormat.String,
-        value: "EBITDA",
-        className: "font-semibold"
-    }
-    cells[ebitdaMarginRow][0] = {
-        format: CellFormat.String,
-        value: "% margin",
-        className: "italic"
-    }
-    cells[ebitdaDaRow][0] = {
-        format: CellFormat.String,
-        value: "  (-) D&A",
-        className: ""
-    }
+    // Add row headers (first column)
+    cells[revenueRow][0] = { format: CellFormat.String, value: "Revenue", className: "font-semibold" };
+    cells[revenueGrowthRow][0] = { format: CellFormat.String, value: "% growth", className: "italic" };
+    cells[cogsRow][0] = { format: CellFormat.String, value: "(-) COGS", className: "" };
+    cells[cogsMarginRow][0] = { format: CellFormat.String, value: "  % margin", className: "italic" };
+    cells[grossProfitRow][0] = { format: CellFormat.String, value: "Gross Profit", className: "font-semibold" };
+    cells[sgaRow][0] = { format: CellFormat.String, value: "(-) SG&A", className: "font-semibold" };
+    cells[sgaMarginRow][0] = { format: CellFormat.String, value: "  % margin", className: "italic" };
+    cells[daRow][0] = { format: CellFormat.String, value: "(+) D&A", className: "" };
+    cells[daCapexRow][0] = { format: CellFormat.String, value: "  % capex", className: "italic" };
+    cells[ebitdaRow][0] = { format: CellFormat.String, value: "EBITDA", className: "font-semibold" };
+    cells[ebitdaMarginRow][0] = { format: CellFormat.String, value: "% margin", className: "italic" };
+    cells[ebitdaDaRow][0] = { format: CellFormat.String, value: "  (-) D&A", className: "" };
+    cells[ebitRow][0] = { format: CellFormat.String, value: "EBIT", className: "font-semibold" };
+    cells[taxesRow][0] = { format: CellFormat.String, value: "  (-) Taxes", className: "" };
+    cells[taxRateRow][0] = { format: CellFormat.String, value: "  % effective tax rate", className: "italic" };
+    cells[nopatRow][0] = { format: CellFormat.String, value: "NOPAT", className: "font-semibold" };
+    cells[nopatDaRow][0] = { format: CellFormat.String, value: "(+) D&A", className: "" };
+    cells[nopatCapexRow][0] = { format: CellFormat.String, value: "(-) Capex", className: "" };
+    cells[nopatSalesIntensity][0] = { format: CellFormat.String, value: "% sales intensity", className: "italic" };
+    cells[nopatNwcDeltaRow][0] = { format: CellFormat.String, value: "(-) Change in Operating NWC", className: "" };
+    cells[nopatMarginRow][0] = { format: CellFormat.String, value: "% margin", className: "italic" };
+    cells[ufcfRow][0] = { format: CellFormat.String, value: "UFCF", className: "font-semibold" };
 
-    cells[ebitRow][0] = {
-        format: CellFormat.String,
-        value: "EBIT",
-        className: "font-semibold"
-    }
-    cells[taxesRow][0] = {
-        format: CellFormat.String,
-        value: "  (-) Taxes",
-        className: ""
-    }
-    cells[taxRateRow][0] = {
-        format: CellFormat.String,
-        value: "  % effective tax rate",
-        className: "italic"
-    }
-
-    cells[nopatRow][0] = {
-        format: CellFormat.String,
-        value: "NOPAT",
-        className: "font-semibold"
-    }
-    cells[nopatDaRow][0] = {
-        format: CellFormat.String,
-        value: "(+) D&A",
-        className: ""
-    }
-    cells[nopatCapexRow][0] = {
-        format: CellFormat.String,
-        value: "(-) Capex",
-        className: ""
-    }
-    cells[nopatSalesIntensity][0] = {
-        format: CellFormat.String,
-        value: "% sales intensity",
-        className: "italic"
-    }
-    cells[nopatNwcDeltaRow][0] = {
-        format: CellFormat.String,
-        value: "(-) Change in Operating NWC",
-        className: ""
-    }
-    cells[nopatMarginRow][0] = {
-        format: CellFormat.String,
-        value: "% margin",
-        className: "italic"
-    }
-
-    cells[ufcfRow][0] = {
-        format: CellFormat.String,
-        value: "UFCF",
-        className: "font-semibold"
-
-    }
-
-    // year headers
-    for (let i = startYear; i <= endYear; i++) {
-        const colIndex = i - startYear + 1; // +1 to leave space for the row titles
+    // Fill year headers and data
+    for (let i = -historicalYears; i <= futureYears; i++) {
+        const colIndex = i + historicalYears + 1; // Column index (0 is for row headers)
         const year = currentYear + i;
-        const actual = i <= 0;
-        const suffix = actual ? 'A' : 'E';
+        const isHistorical = i <= 0;
+        const suffix = isHistorical ? 'A' : 'E';
+
+        // Add year headers
         cells[0][colIndex] = {
             format: CellFormat.String,
             value: `FY ${year}${suffix}`,
             className: cn(
                 "text-end font-semibold",
-                actual ? "bg-blue-300" : "bg-green-300"
+                isHistorical ? "bg-blue-300" : "bg-green-300"
             )
-        }
+        };
 
-        if (i <= 0) {
-            // Historical data - convert to formulas
-            // First, store the raw data from the API
-            const revenue = getHardcodedData(ticker, year, LineItem.Revenue);
-            const cogs = getHardcodedData(ticker, year, LineItem.COGS);
-            const sga = getHardcodedData(ticker, year, LineItem.SGNA);
-            const da = getHardcodedData(ticker, year, LineItem.DNA);
-            const capex = getHardcodedData(ticker, year, LineItem.CAPEX);
-            const taxes = getHardcodedData(ticker, year, LineItem.Taxes);
-            const changeInOperatingNWC = getHardcodedData(ticker, year, LineItem.CONWC);
+        if (isHistorical) {
+            // Handle historical data
+            const yearData = historicalData[year] || {
+                [LineItem.Revenue]: 0,
+                [LineItem.COGS]: 0,
+                [LineItem.SGNA]: 0,
+                [LineItem.DNA]: 0,
+                [LineItem.CAPEX]: 0,
+                [LineItem.Taxes]: 0,
+                [LineItem.CONWC]: 0,
+            };
+
+            // Extract data for this year
+            const revenue = yearData[LineItem.Revenue];
+            const cogs = yearData[LineItem.COGS];
+            const sga = yearData[LineItem.SGNA];
+            const da = yearData[LineItem.DNA];
+            const capex = yearData[LineItem.CAPEX];
+            const taxes = yearData[LineItem.Taxes];
+            const changeInOperatingNWC = yearData[LineItem.CONWC];
 
             // Store the raw data in cells
             cells[revenueRow][colIndex] = { format: CellFormat.Number, value: revenue, className: "text-end" };
@@ -352,91 +293,76 @@ export function generateDCFCells(ticker: string, params: DCFParameters) {
                 value: revenueFormula,
                 className: "text-end"
             }
-
             cells[cogsRow][colIndex] = {
                 format: CellFormat.Number,
                 value: cogsFormula,
                 className: "text-end"
             }
-
             cells[grossProfitRow][colIndex] = {
                 format: CellFormat.Number,
                 value: grossProfitFormula,
                 className: "text-end"
             }
-
             cells[sgaRow][colIndex] = {
                 format: CellFormat.Number,
                 value: sgaFormula,
                 className: "text-end"
             }
-
             cells[nopatCapexRow][colIndex] = {
                 format: CellFormat.Number,
                 value: capexFormula,
                 className: "text-end"
             }
-
             cells[daRow][colIndex] = {
                 format: CellFormat.Number,
                 value: daFormula,
                 className: "text-end"
             }
-
             cells[ebitdaRow][colIndex] = {
                 format: CellFormat.Number,
                 value: ebitdaFormula,
                 className: "text-end"
             }
-
             cells[ebitdaMarginRow][colIndex] = {
                 format: CellFormat.Percentage,
                 value: ebitdaMarginFormula,
                 className: "text-end"
             }
-
             cells[ebitdaDaRow][colIndex] = {
                 format: CellFormat.Number,
                 value: negativeDaFormula,
                 className: "text-end"
             }
-
             cells[ebitRow][colIndex] = {
                 format: CellFormat.Number,
                 value: ebitFormula,
                 className: "text-end"
             }
-
             cells[taxesRow][colIndex] = {
                 format: CellFormat.Number,
                 value: taxesFormula,
                 className: "text-end"
             }
-
             cells[nopatRow][colIndex] = {
                 format: CellFormat.Number,
                 value: nopatFormula,
                 className: "text-end"
             }
-
             cells[nopatDaRow][colIndex] = {
                 format: CellFormat.Number,
                 value: `=${currentDaRef}`,
                 className: "text-end"
             }
-
             cells[nopatNwcDeltaRow][colIndex] = {
                 format: CellFormat.Number,
                 value: nwcDeltaValue,
                 className: "text-end"
             }
-
             cells[nopatMarginRow][colIndex] = {
                 format: CellFormat.Percentage,
                 value: 0,
                 className: "text-end"
             }
-
             cells[ufcfRow][colIndex] = {
                 format: CellFormat.Number,
                 value: ufcfFormula,
@@ -444,12 +370,41 @@ export function generateDCFCells(ticker: string, params: DCFParameters) {
             }
         }
     }
-    return cells
+
+    return cells;
+}
+
+/**
+ * Generates DCF cells for a given ticker using hardcoded values
+ * This is the original function that uses the more focused createDCFCells
+ */
+export function generateSampleDCF(ticker: string, params: DCFParameters) {
+    const currentYear = 2024;
+    const historicalYears = 8;  // -8 years from current
+    const futureYears = 10;     // +10 years from current
+
+    // Gather historical data from getHardcodedData
+    const historicalData: HistoricalData = {};
+
+    for (let year = currentYear - historicalYears; year <= currentYear; year++) {
+        historicalData[year] = {
+            [LineItem.Revenue]: getHardcodedData(ticker, year, LineItem.Revenue),
+            [LineItem.COGS]: getHardcodedData(ticker, year, LineItem.COGS),
+            [LineItem.SGNA]: getHardcodedData(ticker, year, LineItem.SGNA),
+            [LineItem.DNA]: getHardcodedData(ticker, year, LineItem.DNA),
+            [LineItem.CAPEX]: getHardcodedData(ticker, year, LineItem.CAPEX),
+            [LineItem.Taxes]: getHardcodedData(ticker, year, LineItem.Taxes),
+            [LineItem.CONWC]: getHardcodedData(ticker, year, LineItem.CONWC),
+        };
+    }
+
+    // Use the new function to create cells
+    return createDCFCells(historicalYears, futureYears, currentYear, historicalData, params);
 }
 
 export function DCF({ ticker, params }: { ticker: string; params: DCFParameters }) {
     const [cells, setCells] = useState<Cell[][]>(
-        generateDCFCells(ticker, params)
+        generateSampleDCF(ticker, params)
     );
 
     return (
