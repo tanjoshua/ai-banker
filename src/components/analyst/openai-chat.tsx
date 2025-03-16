@@ -227,45 +227,43 @@ const ToolInvocationRenderer = ({
     toolInvocation,
 }: ToolInvocationProps) => {
     const { toolName, state, args } = toolInvocation;
+    console.log(toolInvocation.args)
 
-    // Handle loading states consistently
-    if (state === "partial-call" || state === "call") {
-        const loadingMessages: Record<string, string> = {
-            getSpreadsheetTemplate: "Fetching spreadsheet template...",
-            renderSpreadsheet: "Creating spreadsheet model...",
-            search: "Searching the web for information...",
-            searchContext: "Retrieving context from web sources...",
-            searchQNA: "Finding an answer to your question...",
-            extract: "Extracting content from URLs...",
-        };
-
-        return <ToolLoadingState message={loadingMessages[toolName] || `Processing ${toolName}...`} />;
-    }
-
-    // Handle result states based on tool type
-    if (state === "result") {
-        switch (toolName) {
-            case "getSpreadsheetTemplate":
+    // Handle each tool with its loading and result states in the same case
+    switch (toolName) {
+        case "getSpreadsheetTemplate":
+            if (state === "partial-call" || state === "call") {
+                return <ToolLoadingState message="Fetching spreadsheet template..." />;
+            } else if (state === "result") {
                 return (
                     <ToolResultContainer
                         successMessage="Template fetched successfully"
                     />
                 );
+            }
+            break;
 
-            case "renderSpreadsheet":
+        case "renderSpreadsheet":
+            if (state === "partial-call" || state === "call") {
+                return <ToolLoadingState message="Creating spreadsheet model..." />;
+            } else if (state === "result") {
                 return (
                     <ToolResultContainer
                         successMessage="Spreadsheet created successfully"
                         description="The spreadsheet model is now available in the panel on the right."
                     />
                 );
+            }
+            break;
 
-            case "search": {
+        case "search":
+            if (state === "partial-call" || state === "call") {
+                const query = args?.query || "";
+                return <ToolLoadingState message={`Searching the web for: "${query}"...`} />;
+            } else if (state === "result") {
                 const result = toolInvocation.result as any;
                 return (
                     <ToolResultContainer successMessage="Web search completed">
-                        {result.answer && <AIAnswer answer={result.answer} />}
-
                         {result.results?.length > 0 && (
                             <SearchResults results={result.results} />
                         )}
@@ -299,28 +297,41 @@ const ToolInvocationRenderer = ({
                     </ToolResultContainer>
                 );
             }
+            break;
 
-            case "searchContext":
+        case "searchContext":
+            if (state === "partial-call" || state === "call") {
+                const query = args?.query || "";
+                return <ToolLoadingState message={`Retrieving context for: "${query}"...`} />;
+            } else if (state === "result") {
+                const query = args?.query || "";
                 return (
                     <ToolResultContainer
                         successMessage="Context retrieved successfully"
-                        description="Found relevant information from web sources for your query."
+                        description={`Found relevant information from web sources for: "${query}"`}
                     />
                 );
+            }
+            break;
 
-            case "searchQNA": {
+        case "searchQNA":
+            if (state === "partial-call" || state === "call") {
+                const query = args?.query || "";
+                return <ToolLoadingState message={`Finding an answer to: "${query}"...`} />;
+            } else if (state === "result") {
                 const result = toolInvocation.result as any;
+                const query = args?.query || "";
 
                 if (typeof result === 'string') {
                     return (
-                        <ToolResultContainer successMessage="Answer found">
+                        <ToolResultContainer successMessage={`Answer found for: "${query}"`}>
                             <p className="text-sm">{result}</p>
                         </ToolResultContainer>
                     );
                 }
 
                 return (
-                    <ToolResultContainer successMessage="Answer found">
+                    <ToolResultContainer successMessage={`Answer found for: "${query}"`}>
                         {result.answer && (
                             <div className="mb-2 p-2 bg-muted/50 rounded-md">
                                 <p className="text-sm">{result.answer}</p>
@@ -336,29 +347,90 @@ const ToolInvocationRenderer = ({
                     </ToolResultContainer>
                 );
             }
+            break;
 
-            case "extract": {
+        case "extract":
+            if (state === "partial-call" || state === "call") {
+                const urls = args?.urls || [];
+                const urlCount = urls.length;
+
+                return (
+                    <div>
+                        <ToolLoadingState
+                            message={urlCount === 1
+                                ? `Extracting content from 1 URL...`
+                                : `Extracting content from ${urlCount} URLs...`}
+                        />
+                        {urls.length > 0 && (
+                            <div className="mt-2 ml-4 text-xs text-muted-foreground">
+                                {urls.length <= 3 ? (
+                                    // Show all URLs if there are 3 or fewer
+                                    <div className="space-y-1">
+                                        {urls.map((url: string, index: number) => (
+                                            <div key={`extracting-${index}`} className="truncate">
+                                                • {url}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    // Show first 2 URLs and a count for the rest if there are more than 3
+                                    <div className="space-y-1">
+                                        {urls.slice(0, 2).map((url: string, index: number) => (
+                                            <div key={`extracting-${index}`} className="truncate">
+                                                • {url}
+                                            </div>
+                                        ))}
+                                        <div>• and {urls.length - 2} more URLs...</div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            } else if (state === "result") {
                 const result = toolInvocation.result as any;
+                const urls = args?.urls || [];
+                const urlCount = urls.length;
+                const extractMessage = urlCount === 1
+                    ? `Content extracted from 1 URL successfully`
+                    : `Content extracted from ${urlCount} URLs successfully`;
 
                 return (
                     <ToolResultContainer
-                        successMessage="Content extracted successfully"
+                        successMessage={extractMessage}
                         error={result.error}
                     >
-                        {result.results?.length > 0 && (
+                        {result.results?.length > 0 ? (
                             <ToolSourcesList
                                 results={result.results.map((r: any) => ({ url: r.url })) || []}
                                 title="Extracted from:"
                                 prefix="extract-"
                             />
+                        ) : (
+                            // If no results but we have URLs in args, show the original URLs
+                            urls.length > 0 && (
+                                <div className="mt-2 text-xs text-muted-foreground">
+                                    <p className="font-medium mb-1">Attempted to extract from:</p>
+                                    <div className="space-y-1 ml-2">
+                                        {urls.map((url: string, index: number) => (
+                                            <div key={`extract-attempt-${index}`} className="truncate">
+                                                • {url}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
                         )}
                     </ToolResultContainer>
                 );
             }
+            break;
 
-            default:
-                return null;
-        }
+        default:
+            if (state === "partial-call" || state === "call") {
+                return <ToolLoadingState message={`Processing ${toolName}...`} />;
+            }
+            break;
     }
 
     return null;
