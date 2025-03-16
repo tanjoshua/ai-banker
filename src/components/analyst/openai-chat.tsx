@@ -106,56 +106,262 @@ type ToolInvocationProps = {
     toolInvocation: ToolInvocation;
 };
 
+// Reusable components for tool invocation rendering
+const ToolLoadingState = ({ message }: { message: string }) => (
+    <div className="my-2 flex items-center gap-2 p-3 rounded-md bg-muted">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+        <p className="text-sm font-medium">{message}</p>
+    </div>
+);
+
+const ToolResultContainer = ({
+    successMessage,
+    description,
+    children,
+    error
+}: {
+    successMessage: string;
+    description?: string;
+    children?: React.ReactNode;
+    error?: string;
+}) => (
+    <div className="my-2 border rounded-md p-3">
+        <p className="text-sm text-green-700 font-medium mb-2">
+            ✓ {successMessage}
+        </p>
+        {description && (
+            <p className="text-xs text-muted-foreground">
+                {description}
+            </p>
+        )}
+        {error && (
+            <p className="text-sm text-red-500">{error}</p>
+        )}
+        {children}
+    </div>
+);
+
+// Source link component for consistent rendering
+const SourceLink = ({
+    url,
+    title,
+    index,
+    prefix = ""
+}: {
+    url: string;
+    title?: string;
+    index: number;
+    prefix?: string;
+}) => (
+    <a
+        key={`${prefix}source-${index}`}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+    >
+        <ExternalLink size={12} />
+        <span className="truncate">{title || new URL(url).hostname}</span>
+    </a>
+);
+
+// Search results component
+const SearchResults = ({ results }: { results: any[] }) => (
+    <div>
+        <p className="text-xs text-muted-foreground mb-2">Search Results:</p>
+        <div className="space-y-2">
+            {results.map((result, index) => (
+                <div key={`result-${index}`} className="text-xs border-l-2 border-primary pl-2">
+                    <a
+                        href={result.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium hover:underline flex items-center gap-1"
+                    >
+                        {result.title} <ExternalLink size={12} />
+                    </a>
+                    <p className="line-clamp-2 text-muted-foreground mt-1">
+                        {result.content}
+                    </p>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+// Sources list component for tools
+const ToolSourcesList = ({
+    results,
+    title = "Sources:",
+    prefix = ""
+}: {
+    results: any[];
+    title?: string;
+    prefix?: string;
+}) => (
+    <div>
+        <p className="text-xs text-muted-foreground mb-2">{title}</p>
+        <div className="space-y-1">
+            {results.map((result, index) => (
+                <SourceLink
+                    key={index}
+                    url={result.url}
+                    title={result.title}
+                    index={index}
+                    prefix={prefix}
+                />
+            ))}
+        </div>
+    </div>
+);
+
+// AI Answer component for displaying answers
+const AIAnswer = ({ answer }: { answer: string }) => (
+    <div className="mb-3 p-2 bg-muted/50 rounded-md">
+        <p className="text-sm font-medium">AI Answer:</p>
+        <p className="text-sm">{answer}</p>
+    </div>
+);
+
 const ToolInvocationRenderer = ({
     toolInvocation,
 }: ToolInvocationProps) => {
     const { toolName, state, args } = toolInvocation;
 
-    switch (toolName) {
-        case "getSpreadsheetTemplate":
-            switch (state) {
-                case "partial-call":
-                case "call":
-                    return (
-                        <div className="my-2 flex items-center gap-2 p-3 rounded-md bg-muted">
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                            <p className="text-sm font-medium">Fetching spreadsheet template...</p>
-                        </div>
-                    );
-                case 'result':
-                    return <div className="my-2 border rounded p-2">
-                        <p className="text-sm text-green-700 font-medium">
-                            ✓ Template fetched successfully
-                        </p>
-                    </div>
-            }
+    // Handle loading states consistently
+    if (state === "partial-call" || state === "call") {
+        const loadingMessages: Record<string, string> = {
+            getSpreadsheetTemplate: "Fetching spreadsheet template...",
+            renderSpreadsheet: "Creating spreadsheet model...",
+            search: "Searching the web for information...",
+            searchContext: "Retrieving context from web sources...",
+            searchQNA: "Finding an answer to your question...",
+            extract: "Extracting content from URLs...",
+        };
 
-        case "renderSpreadsheet":
-            switch (state) {
-                case 'partial-call':
-                case 'call':
-                    return (
-                        <div className="my-2 flex items-center gap-2 p-3 rounded-md bg-muted">
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                            <p className="text-sm font-medium">Creating spreadsheet model...</p>
-                        </div>
-                    );
-
-                case 'result':
-                    return (
-                        <div className="my-2 border rounded p-2">
-                            <p className="text-sm text-green-700 font-medium">
-                                ✓ Spreadsheet created successfully
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                The spreadsheet model is now available in the panel on the right.
-                            </p>
-                        </div>
-                    );
-            }
-        default:
-            return null;
+        return <ToolLoadingState message={loadingMessages[toolName] || `Processing ${toolName}...`} />;
     }
+
+    // Handle result states based on tool type
+    if (state === "result") {
+        switch (toolName) {
+            case "getSpreadsheetTemplate":
+                return (
+                    <ToolResultContainer
+                        successMessage="Template fetched successfully"
+                    />
+                );
+
+            case "renderSpreadsheet":
+                return (
+                    <ToolResultContainer
+                        successMessage="Spreadsheet created successfully"
+                        description="The spreadsheet model is now available in the panel on the right."
+                    />
+                );
+
+            case "search": {
+                const result = toolInvocation.result as any;
+                return (
+                    <ToolResultContainer successMessage="Web search completed">
+                        {result.answer && <AIAnswer answer={result.answer} />}
+
+                        {result.results?.length > 0 && (
+                            <SearchResults results={result.results} />
+                        )}
+
+                        {result.images?.length > 0 && (
+                            <div className="mt-3">
+                                <p className="text-xs text-muted-foreground mb-2">Images:</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {result.images.map((image: any, index: number) => (
+                                        <div key={`image-${index}`} className="text-xs">
+                                            <a
+                                                href={image.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="hover:opacity-90"
+                                            >
+                                                <img
+                                                    src={image.url}
+                                                    alt={image.description || 'Search result image'}
+                                                    className="w-full h-auto rounded-md"
+                                                />
+                                            </a>
+                                            {image.description && (
+                                                <p className="mt-1 text-muted-foreground">{image.description}</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </ToolResultContainer>
+                );
+            }
+
+            case "searchContext":
+                return (
+                    <ToolResultContainer
+                        successMessage="Context retrieved successfully"
+                        description="Found relevant information from web sources for your query."
+                    />
+                );
+
+            case "searchQNA": {
+                const result = toolInvocation.result as any;
+
+                if (typeof result === 'string') {
+                    return (
+                        <ToolResultContainer successMessage="Answer found">
+                            <p className="text-sm">{result}</p>
+                        </ToolResultContainer>
+                    );
+                }
+
+                return (
+                    <ToolResultContainer successMessage="Answer found">
+                        {result.answer && (
+                            <div className="mb-2 p-2 bg-muted/50 rounded-md">
+                                <p className="text-sm">{result.answer}</p>
+                            </div>
+                        )}
+
+                        {result.results?.length > 0 && (
+                            <ToolSourcesList
+                                results={result.results}
+                                prefix="qna-"
+                            />
+                        )}
+                    </ToolResultContainer>
+                );
+            }
+
+            case "extract": {
+                const result = toolInvocation.result as any;
+
+                return (
+                    <ToolResultContainer
+                        successMessage="Content extracted successfully"
+                        error={result.error}
+                    >
+                        {result.results?.length > 0 && (
+                            <ToolSourcesList
+                                results={result.results.map((r: any) => ({ url: r.url })) || []}
+                                title="Extracted from:"
+                                prefix="extract-"
+                            />
+                        )}
+                    </ToolResultContainer>
+                );
+            }
+
+            default:
+                return null;
+        }
+    }
+
+    return null;
 };
 
 // AssistantMessage component
@@ -175,7 +381,24 @@ const AssistantMessage = ({
             {message.parts.map((part, index) => {
                 switch (part.type) {
                     case 'text':
-                        return <ReactMarkdown key={index}>{part.text}</ReactMarkdown>;
+                        return (
+                            <ReactMarkdown
+                                key={index}
+                                components={{
+                                    // Configure links to open in new tabs
+                                    a: ({ node, ...props }) => (
+                                        <a
+                                            {...props}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-primary hover:underline"
+                                        />
+                                    )
+                                }}
+                            >
+                                {part.text}
+                            </ReactMarkdown>
+                        );
                     case 'tool-invocation':
                         return (
                             <div key={index}>
