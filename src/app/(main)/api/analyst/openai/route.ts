@@ -1,6 +1,6 @@
 import { streamText, tool } from "ai";
 import { z } from "zod";
-import { dcfParametersSchema, renderSpreadsheetCell } from "@/components/spreadsheet/types";
+import { dcfParametersSchema, renderSpreadsheetCell, historicalDataSchema } from "@/components/spreadsheet/types";
 import { openai } from "@ai-sdk/openai";
 import { dcfExample } from "@/components/spreadsheet/templates/dcf";
 import { tavilyTools } from "@/lib/tools/tavily";
@@ -60,7 +60,7 @@ I am an **interactive equity research assistant** designed to support analysts i
   - **Earnings expectations**
   - **Market sentiment** (bull vs. bear case)
   - **Consensus narratives**
-- **User Input Checkpoint**: *"Do you agree with The Street’s view, or do you see something they are missing?"*
+- **User Input Checkpoint**: *"Do you agree with The Street's view, or do you see something they are missing?"*
 
 
 #### **6 Peer Comps Analysis** *(Before Investment Memorandum)*
@@ -93,9 +93,10 @@ Use **searchQNA** for targeted questions about the stock
             tools: {
                 renderDCFModel: tool(
                     {
-                        description: "A tool to render the DCF model",
+                        description: "A tool to render a Discounted Cash Flow (DCF) model based on growth parameters and historical financial data",
                         parameters: z.object({
-                            dcfParameters: dcfParametersSchema
+                            dcfParameters: dcfParametersSchema,
+                            historicalData: historicalDataSchema.optional()
                         })
                     }
                 ),

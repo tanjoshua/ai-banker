@@ -17,6 +17,65 @@ export type Cell = {
 
 import { z } from "zod";
 
+// Financial statement line items
+export enum LineItem {
+    Revenue = "revenue",
+    COGS = "cogs",
+    SGNA = "SG&A",
+    DNA = "D&A",
+    CAPEX = "CAPEX",
+    Taxes = "Taxes",
+    CONWC = "CONWC",
+}
+
+// Historical data types
+export type HistoricalData = {
+    [year: number]: {
+        [key in LineItem]: number;
+    };
+};
+
+// Zod schema for historical data validation
+export const historicalDataSchema = z.record(
+    // Year keys can be strings or numbers, but will be converted to numbers
+    z.string().or(z.number()).transform(v => typeof v === 'string' ? parseInt(v, 10) : v),
+    // Each year should have all the fields defined in LineItem enum
+    z.record(
+        z.string(),
+        z.number()
+    ).superRefine((data, ctx) => {
+        // Get all LineItem enum values to validate against
+        const requiredKeys = Object.values(LineItem);
+
+        // Check if all LineItem keys are present (using case-insensitive matching)
+        for (const requiredKey of requiredKeys) {
+            const keyExists = Object.keys(data).some(
+                key => key.toLowerCase() === requiredKey.toLowerCase()
+            );
+
+            if (!keyExists) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Missing required field: ${requiredKey}`
+                });
+            }
+        }
+    })
+).describe(`Historical financial data organized by year. 
+Format: { "2020": { "revenue": 1000, "cogs": 600, ... }, "2021": { ... } }
+
+Required fields for each year (exactly as named in LineItem enum):
+1. ${LineItem.Revenue} - Total company revenue 
+2. ${LineItem.COGS} - Cost of Goods Sold
+3. ${LineItem.SGNA} - Selling, General & Administrative expenses
+4. ${LineItem.DNA} - Depreciation & Amortization
+5. ${LineItem.CAPEX} - Capital Expenditures
+6. ${LineItem.Taxes} - Income taxes
+7. ${LineItem.CONWC} - Change in Net Working Capital
+
+All values should be in millions of dollars (or the company's primary currency).
+Provide at least 3-5 years of historical data for best results.`);
+
 export const dcfParametersSchema = z.object({
     revenueGrowth: z.number().describe("Estimated revenue growth rate as a decimal based on the average of historical growth rates barring any anomalies."),
     cogsMargin: z.number().describe("Estimated cost of goods sold margin as a decimal. Calculated by cost of goods sold over revenue. Derived from a linear regression on historical data."),

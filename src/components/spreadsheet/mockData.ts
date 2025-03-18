@@ -1,12 +1,4 @@
-export enum LineItem {
-    Revenue = "revenue",
-    COGS = "cogs",
-    SGNA = "SG&A",
-    DNA = "D&A",
-    CAPEX = "CAPEX",
-    Taxes = "Taxes",
-    CONWC = "CONWC",
-}
+import { LineItem } from "./types";
 
 export type FinancialStatementData = {
     [Key in LineItem]: number;

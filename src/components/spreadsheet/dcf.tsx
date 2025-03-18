@@ -1,18 +1,12 @@
 'use client';
 import { cn } from "@/lib/utils";
 import { SpreadSheet, getCoordinates } from "./sheet";
-import { getHardcodedData, LineItem, FinancialStatementData } from "./mockData";
-import { Cell, CellFormat, DCFParameters } from "./types";
+import { getHardcodedData, FinancialStatementData } from "./mockData";
+import { Cell, CellFormat, DCFParameters, HistoricalData, LineItem } from "./types";
 import { useState } from "react";
-
-// Type for historical data by year
-export type HistoricalData = {
-    [year: number]: FinancialStatementData;
-};
 
 /**
  * Creates DCF spreadsheet cells
- * @param historicalYears Number of historical years
  * @param futureYears Number of future years
  * @param currentYear The current year (base year)
  * @param historicalData Historical financial data by year
@@ -20,12 +14,21 @@ export type HistoricalData = {
  * @returns Cell matrix for the DCF model
  */
 export function createDCFCells(
-    historicalYears: number,
     futureYears: number,
     currentYear: number,
     historicalData: HistoricalData,
     params: DCFParameters
 ): Cell[][] {
+    // Infer historical years from the data
+    const years = Object.keys(historicalData).map(Number);
+
+    // Default to 8 historical years if no data is provided
+    let historicalYears = 8;
+    if (years.length > 0) {
+        const earliestYear = Math.min(...years);
+        historicalYears = currentYear - earliestYear;
+    }
+
     // Define row indices for different line items
     const revenueRow = 1;
     const revenueGrowthRow = revenueRow + 1;
@@ -380,7 +383,7 @@ export function createDCFCells(
  */
 export function generateSampleDCF(ticker: string, params: DCFParameters) {
     const currentYear = 2024;
-    const historicalYears = 8;  // -8 years from current
+    const historicalYears = 8;  // Used only for historicalData generation
     const futureYears = 10;     // +10 years from current
 
     // Gather historical data from getHardcodedData
@@ -399,7 +402,7 @@ export function generateSampleDCF(ticker: string, params: DCFParameters) {
     }
 
     // Use the new function to create cells
-    return createDCFCells(historicalYears, futureYears, currentYear, historicalData, params);
+    return createDCFCells(futureYears, currentYear, historicalData, params);
 }
 
 export function DCF({ ticker, params }: { ticker: string; params: DCFParameters }) {
