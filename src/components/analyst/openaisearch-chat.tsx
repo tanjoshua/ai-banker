@@ -5,14 +5,21 @@ import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Send, ExternalLink } from "lucide-react";
+import { Send, ExternalLink, Upload, Trash2, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { UIMessage } from 'ai';
-import { toast } from 'sonner';
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { tavilyTools } from '@/lib/tools/tavily'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Removed DCF and resizable panel imports as we focus on analysis only
 
@@ -21,6 +28,12 @@ type Source = {
   id: string;
   url: string;
   title?: string;
+};
+
+type UploadedFile = {
+  id: string;
+  filename: string;
+  url: string;
 };
 
 // SourcesList component
@@ -82,20 +95,20 @@ const ChatInput = ({
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   status: string;
 }) => (
-  <div className="">
+  <div className="w-full">
     <form onSubmit={handleSubmit} className="flex gap-2 relative">
       <Input
         value={input}
         onChange={handleInputChange}
         placeholder="Ask a question about investments..."
-        className="flex-1 pr-10 py-6"
+        className="flex-1 pr-10 py-6 h-12"
         disabled={status === 'submitted' || status === 'streaming'}
       />
       <Button
         type="submit"
         size="icon"
         disabled={(status === 'submitted' || status === 'streaming') || !input.trim()}
-        className="absolute right-1 top-1/2 transform -translate-y-1/2"
+        className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-green-700 hover:bg-green-800 text-white"
       >
         {(status === 'submitted' || status === 'streaming') ? (
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -173,15 +186,196 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
   );
 };
 
+// FileUploadButton component
+const FileUploadButton = ({ onUpload }: { onUpload: (file: UploadedFile) => void }) => {
+  const [isUploading, setIsUploading] = React.useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/analyst/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      onUpload(data);
+      toast.success("File uploaded successfully", {
+        description: file.name,
+      });
+    } catch (error) {
+      toast.error("Upload failed", {
+        description: "Please try again",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="file"
+        onChange={handleUpload}
+        className="hidden"
+        id="file-upload"
+        accept=".pdf,.doc,.docx,.txt,.csv"
+        disabled={isUploading}
+      />
+      <label
+        htmlFor="file-upload"
+        className={cn(
+          "flex items-center justify-center w-10 h-10 rounded-md border border-green-500 hover:bg-green-500/10 cursor-pointer",
+          isUploading && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        {isUploading ? (
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        ) : (
+          <Upload className="h-4 w-4" />
+        )}
+      </label>
+    </div>
+  );
+};
+
+// FileManager component
+const FileManager = ({ 
+  files, 
+  onDelete 
+}: { 
+  files: UploadedFile[], 
+  onDelete: (id: string) => void 
+}) => {
+  if (files.length === 0) return null;
+  
+  return (
+    <div className="mt-4 p-4 bg-muted rounded-lg">
+      <h4 className="text-sm font-semibold mb-2">Uploaded Files:</h4>
+      <ul className="space-y-2">
+        {files.map((file) => (
+          <li key={file.id} className="text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ExternalLink size={14} />
+              <span className="truncate">{file.filename}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(file.id)}
+              className="h-6 w-6 p-0"
+            >
+              <Trash2 size={14} className="text-muted-foreground hover:text-destructive" />
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+// FilesDialog component
+const FilesDialog = ({ 
+  files, 
+  onDelete 
+}: { 
+  files: UploadedFile[], 
+  onDelete: (id: string) => void 
+}) => {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 border-green-500 hover:bg-green-500/10"
+          aria-label="View uploaded files"
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Uploaded Files</DialogTitle>
+        </DialogHeader>
+        {files.length === 0 ? (
+          <div className="py-6 text-center text-muted-foreground">
+            No files uploaded yet
+          </div>
+        ) : (
+          <div className="mt-4">
+            <ul className="space-y-3">
+              {files.map((file) => (
+                <li key={file.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText size={16} className="text-muted-foreground" />
+                    <a 
+                      href={file.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm hover:underline"
+                    >
+                      {file.filename}
+                    </a>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(file.id)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Trash2 size={16} className="text-muted-foreground hover:text-destructive" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // Main component
 export function OpenAIChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
 
   const { messages, input, handleInputChange, handleSubmit, status, error } = useChat({
     api: "/api/analyst/openaisearch",
     maxSteps: 5,
-    // Removed onToolCall since we no longer handle DCF model creation
   });
+
+  const handleFileUpload = (file: UploadedFile) => {
+    setUploadedFiles(prev => [...prev, file]);
+  };
+
+  const handleDeleteFile = async (id: string) => {
+    try {
+      const response = await fetch(`/api/analyst/files/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete file');
+      }
+      
+      setUploadedFiles(prev => prev.filter(file => file.id !== id));
+      toast.success("File deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete file");
+    }
+  };
 
   useEffect(() => {
     if (error) {
@@ -206,7 +400,10 @@ export function OpenAIChat() {
     >
       <div className="flex-1 overflow-y-auto py-4">
         {messages.length === 0 ? (
-          <EmptyState />
+          <div className="h-full flex flex-col items-center justify-center">
+            <EmptyState />
+            <FileManager files={uploadedFiles} onDelete={handleDeleteFile} />
+          </div>
         ) : (
           <div className="space-y-6 py-4">
             {messages.map((message) => (
@@ -217,12 +414,18 @@ export function OpenAIChat() {
         )}
       </div>
 
-      <ChatInput
-        input={input}
-        handleInputChange={handleInputChange}
-        handleSubmit={handleSubmit}
-        status={status}
-      />
+      <div className="flex items-center gap-2">
+        <FilesDialog files={uploadedFiles} onDelete={handleDeleteFile} />
+        <div className="flex-1 flex items-center gap-2">
+          <FileUploadButton onUpload={handleFileUpload} />
+          <ChatInput
+            input={input}
+            handleInputChange={handleInputChange}
+            handleSubmit={handleSubmit}
+            status={status}
+          />
+        </div>
+      </div>
     </motion.div>
   );
 }
