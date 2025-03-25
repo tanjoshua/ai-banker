@@ -34,6 +34,7 @@ type UploadedFile = {
   id: string;
   filename: string;
   url: string;
+  chunks?: number;
 };
 
 // SourcesList component
@@ -89,11 +90,13 @@ const ChatInput = ({
   handleInputChange,
   handleSubmit,
   status,
+  disabled,
 }: {
   input: string;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   status: string;
+  disabled: boolean;
 }) => (
   <div className="w-full">
     <form onSubmit={handleSubmit} className="flex gap-2 relative">
@@ -102,7 +105,7 @@ const ChatInput = ({
         onChange={handleInputChange}
         placeholder="Ask a question about investments..."
         className="flex-1 pr-10 py-6 h-12"
-        disabled={status === 'submitted' || status === 'streaming'}
+        disabled={disabled}
       />
       <Button
         type="submit"
@@ -187,7 +190,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
 };
 
 // FileUploadButton component
-const FileUploadButton = ({ onUpload }: { onUpload: (file: UploadedFile) => void }) => {
+const FileUploadButton = ({ onUpload, disabled }: { onUpload: (file: UploadedFile) => void; disabled: boolean }) => {
   const [isUploading, setIsUploading] = React.useState(false);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,7 +233,7 @@ const FileUploadButton = ({ onUpload }: { onUpload: (file: UploadedFile) => void
         className="hidden"
         id="file-upload"
         accept=".pdf,.doc,.docx,.txt,.csv"
-        disabled={isUploading}
+        disabled={disabled}
       />
       <label
         htmlFor="file-upload"
@@ -266,8 +269,13 @@ const FileManager = ({
         {files.map((file) => (
           <li key={file.id} className="text-sm flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ExternalLink size={14} />
+              <FileText size={14} className="text-muted-foreground" />
               <span className="truncate">{file.filename}</span>
+              {file.chunks && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  {file.chunks} chunks
+                </span>
+              )}
             </div>
             <Button
               variant="ghost"
@@ -290,7 +298,7 @@ const FilesDialog = ({
   onDelete 
 }: { 
   files: UploadedFile[], 
-  onDelete: (id: string) => void 
+  onDelete: (id: string) => void
 }) => {
   return (
     <Dialog>
@@ -319,14 +327,14 @@ const FilesDialog = ({
                 <li key={file.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileText size={16} className="text-muted-foreground" />
-                    <a 
-                      href={file.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-sm hover:underline"
-                    >
-                      {file.filename}
-                    </a>
+                    <div className="flex flex-col">
+                      <span className="text-sm">{file.filename}</span>
+                      {file.chunks && (
+                        <span className="text-xs text-muted-foreground">
+                          {file.chunks} chunks
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
@@ -350,14 +358,46 @@ const FilesDialog = ({
 export function OpenAIChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+  const [isChunking, setIsChunking] = React.useState(false);
 
   const { messages, input, handleInputChange, handleSubmit, status, error } = useChat({
     api: "/api/analyst/openaisearch",
     maxSteps: 5,
   });
 
-  const handleFileUpload = (file: UploadedFile) => {
+  const handleFileUpload = async (file: UploadedFile) => {
     setUploadedFiles(prev => [...prev, file]);
+    
+    // Show processing toast
+    const processingToast = toast.loading("Processing file contents...", {
+        description: "Chunking text for analysis"
+    });
+
+    try {
+        const response = await fetch('/api/analyst/process', {
+            method: 'POST',
+            body: JSON.stringify({ fileId: file.id }),
+            headers: { 'Content-Type': 'application/json' },
+        });
+        
+        if (!response.ok) throw new Error('Failed to process file');
+        
+        const data = await response.json();
+        setUploadedFiles(prev => prev.map(f => 
+            f.id === file.id ? { ...f, chunks: data.chunks } : f
+        ));
+
+        // Show success toast with chunk count
+        toast.success("File processed successfully", {
+            description: `Split into ${data.chunks} chunks`,
+            id: processingToast
+        });
+    } catch (error) {
+        toast.error("Failed to process file", {
+            description: "Could not chunk file contents",
+            id: processingToast
+        });
+    }
   };
 
   const handleDeleteFile = async (id: string) => {
@@ -415,14 +455,21 @@ export function OpenAIChat() {
       </div>
 
       <div className="flex items-center gap-2">
-        <FilesDialog files={uploadedFiles} onDelete={handleDeleteFile} />
+        <FilesDialog 
+          files={uploadedFiles} 
+          onDelete={handleDeleteFile}
+        />
         <div className="flex-1 flex items-center gap-2">
-          <FileUploadButton onUpload={handleFileUpload} />
+          <FileUploadButton 
+            onUpload={handleFileUpload}
+            disabled={isChunking}
+          />
           <ChatInput
             input={input}
             handleInputChange={handleInputChange}
             handleSubmit={handleSubmit}
             status={status}
+            disabled={isChunking}
           />
         </div>
       </div>
