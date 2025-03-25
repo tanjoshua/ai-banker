@@ -7,6 +7,7 @@ import { tavilyTools } from '@/lib/tools/tavily'
 import { db } from '@/lib/db';
 import { files } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { createFileContext, FileWithContent } from '@/lib/utils/text-chunking';
 
 export const maxDuration = 60; // Increase to 60 seconds for complex operations
 
@@ -14,7 +15,6 @@ export const maxDuration = 60; // Increase to 60 seconds for complex operations
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-    // Using a hardcoded user ID since we're not using authentication
     const userId = "default-user";
     const { messages } = await req.json();
 
@@ -27,7 +27,9 @@ export async function POST(req: Request) {
     const fileUrls = userFiles.map(file => file.url);
     const fileContext = userFiles.length > 0 
         ? `The user has uploaded the following files: ${userFiles.map(f => f.filename).join(', ')}. 
-           You can analyze these files using the search tool with the following URLs: ${fileUrls.join(', ')}`
+           You can analyze these files using the search tool with the following URLs: ${fileUrls.join(', ')}.
+           
+           ${createFileContext(userFiles as FileWithContent[])}`
         : '';
 
     const apiKey = process.env.TAVILY_API_KEY;
