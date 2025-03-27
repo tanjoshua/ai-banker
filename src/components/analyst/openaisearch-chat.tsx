@@ -35,6 +35,7 @@ type UploadedFile = {
   filename: string;
   url: string;
   chunks?: number;
+  contentType: string;
 };
 
 // SourcesList component
@@ -212,7 +213,15 @@ const FileUploadButton = ({ onUpload, disabled }: { onUpload: (file: UploadedFil
       }
 
       const data = await response.json();
-      onUpload(data);
+      
+      // Add a delay before processing to ensure the file is available
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      onUpload({
+        ...data,
+        contentType: file.type
+      });
+      
       toast.success("File uploaded successfully", {
         description: file.name,
       });
