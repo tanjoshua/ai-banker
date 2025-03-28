@@ -1,6 +1,7 @@
 import { tool, type Tool } from 'ai'
 import { z } from 'zod'
 import { tavily } from '@tavily/core'
+import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf"
 
 type TavilyTools = 'search' | 'searchContext' | 'searchQNA' | 'extract'
 
@@ -37,6 +38,11 @@ interface TavilyExtractResult {
 interface TavilyExtractResponse {
   results: TavilyExtractResult[]
   error?: string
+}
+
+// Helper function to check if a URL points to a PDF
+function isPdfUrl(url: string): boolean {
+  return url.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('.pdf?');
 }
 
 export const tavilyTools = (
@@ -215,22 +221,108 @@ export const tavilyTools = (
       },
     }),
     extract: tool({
-      description: 'Extract content and optionally images from a list of URLs',
+      description: 'Extract content from URLs, with special handling for PDF files using LangChain.',
       parameters: z.object({
         urls: z
           .array(z.string().url())
           .max(20)
           .describe('List of URLs to extract content from (maximum 20 URLs)'),
+        extractDepth: z
+          .enum(['basic', 'advanced'])
+          .optional()
+          .describe(
+            'Depth of extraction - advanced retrieves more data including tables and embedded content'
+          ),
+        includeImages: z
+          .boolean()
+          .optional()
+          .describe('Include images found in the extracted content')
       }),
-      execute: async ({ urls }) => {
+      execute: async ({ urls, ...options }) => {
         try {
-          const response = await client.extract(urls, {})
+          console.log(`[EXTRACT] Processing ${urls.length} URLs`);
+
+          // Filter to only get PDF URLs
+          const pdfUrls = urls.filter(url => isPdfUrl(url));
+          const nonPdfUrls = urls.filter(url => !isPdfUrl(url));
+
+          console.log(`[EXTRACT] Found ${pdfUrls.length} PDF URLs and ${nonPdfUrls.length} non-PDF URLs`);
+
+          let results: TavilyExtractResult[] = [];
+          let errorMessage = '';
+
+          // Process non-PDF URLs with Tavily
+          if (nonPdfUrls.length > 0) {
+            try {
+              console.log(`[EXTRACT] Processing non-PDF URLs with Tavily: ${nonPdfUrls.join(', ')}`);
+              const response = await client.extract(nonPdfUrls, options);
+              const tavilyResults = response.results.map((result) => {
+                console.log(`[EXTRACT] ✅ Successfully extracted content from ${result.url} (${result.rawContent.length} chars)`);
+                return {
+                  url: result.url,
+                  rawContent: result.rawContent,
+                  images: result.images
+                };
+              });
+              results = [...results, ...tavilyResults];
+            } catch (error) {
+              console.error(`[EXTRACT] ❌ Error extracting non-PDF content with Tavily: ${String(error)}`);
+              errorMessage += `Error extracting non-PDF content with Tavily: ${String(error)}. `;
+              // Add fallback placeholders for failed non-PDF URLs
+              nonPdfUrls.forEach(url => {
+                results.push({
+                  url,
+                  rawContent: `Tavily extraction failed for URL: ${url}`,
+                  error: String(error)
+                });
+              });
+            }
+          }
+
+          // Process PDF URLs with LangChain's WebPDFLoader
+          if (pdfUrls.length > 0) {
+            console.log(`[EXTRACT] Processing PDF URLs with LangChain: ${pdfUrls.join(', ')}`);
+            for (const url of pdfUrls) {
+              try {
+                console.log(`[EXTRACT] Fetching PDF from ${url}`);
+                // First download the PDF from the URL
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+
+                const pdfBlob = await response.blob();
+                console.log(`[EXTRACT] Downloaded PDF blob of size ${pdfBlob.size} bytes from ${url}`);
+
+                // Use WebPDFLoader with the blob directly
+                const loader = new WebPDFLoader(pdfBlob);
+                const docs = await loader.load();
+                console.log(`[EXTRACT] PDF parsed into ${docs.length} pages`);
+
+                // Combine content from all pages
+                const pdfContent = docs.map((doc: { pageContent: string }) => doc.pageContent).join("\n\n");
+                console.log(`[EXTRACT] ✅ Successfully extracted content from PDF ${url} (${pdfContent.length} chars)`);
+
+                results.push({
+                  url,
+                  rawContent: pdfContent,
+                  // Note: WebPDFLoader doesn't extract images natively
+                });
+              } catch (pdfError) {
+                console.error(`[EXTRACT] ❌ Error processing PDF ${url}: ${String(pdfError)}`);
+                results.push({
+                  url,
+                  rawContent: `Failed to extract content from PDF: ${url}`,
+                  error: String(pdfError)
+                });
+                errorMessage += `Error processing PDF ${url}: ${String(pdfError)}. `;
+              }
+            }
+          }
+
+          console.log(`[EXTRACT] Completed with ${results.length} results. ${errorMessage ? 'Errors: ' + errorMessage : 'No errors.'}`);
           return {
-            results: response.results.map((result) => ({
-              url: result.url,
-              rawContent: result.rawContent,
-            })),
-          } as TavilyExtractResponse
+            results,
+            error: errorMessage || undefined
+          } as TavilyExtractResponse;
         } catch (error) {
           return {
             results: [],
