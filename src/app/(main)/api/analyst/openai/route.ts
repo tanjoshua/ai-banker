@@ -103,20 +103,20 @@ Use **searchQNA** for targeted questions about the stock
                 ...tavilyTools({ apiKey: process.env.TAVILY_API_KEY! }, {
                     excludeTools: [],
                 }),
-                getSpreadsheetTemplate: tool({
-                    description: "A tool to get the spreadsheet template",
-                    parameters: z.object({
-                        type: z.enum(['dcf'])
-                    }),
-                    execute: async ({ type }) => {
-                        if (type === 'dcf') {
-                            return dcfExample;
-                        }
-                        // can add other templates next time, or even let the user choose the template
-                    }
-                }),
+                // getSpreadsheetTemplate: tool({
+                //     description: "A tool to get the spreadsheet template",
+                //     parameters: z.object({
+                //         type: z.enum(['dcf'])
+                //     }),
+                //     execute: async ({ type }) => {
+                //         if (type === 'dcf') {
+                //             return dcfExample;
+                //         }
+                //         // can add other templates next time, or even let the user choose the template
+                //     }
+                // }),
                 renderSpreadsheet: tool({
-                    description: "A tool to render the final spreadsheet",
+                    description: "A tool to render a simple spreadsheet. Only use for small spreadsheets.",
                     parameters: z.object({
                         cells: z.array(z.array(renderSpreadsheetCell))
                     })
