@@ -210,13 +210,21 @@ export async function fetchAlphaVantageData(
 
             const data = await response.json();
 
+            // Create a new data object with only the annual reports
+            const annualData: {
+                symbol: string;
+                annualReports?: any[];
+            } = {
+                symbol: data.symbol
+            };
+
             // Check if we have annual reports and limit them to the requested years
             if (data && data.annualReports && Array.isArray(data.annualReports) && data.annualReports.length > 0) {
-                data.annualReports = data.annualReports.slice(0, years);
+                annualData.annualReports = data.annualReports.slice(0, years);
             }
 
             // Add this data to our combined response using the endpoint key
-            combinedData[endpoint.key] = data;
+            combinedData[endpoint.key] = annualData;
         }
 
         return combinedData;
