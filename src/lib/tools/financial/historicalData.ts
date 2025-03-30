@@ -2,17 +2,6 @@ import { tool, type Tool } from 'ai';
 import { z } from 'zod';
 import { LineItem, historicalDataSchema } from '@/components/spreadsheet/types';
 
-// Available financial data sources
-export type FinancialDataSource = 'yahoo' | 'alphavantage' | 'mock';
-
-// Available financial statement types
-export enum FinancialStatementType {
-    IncomeStatement = 'income',
-    BalanceSheet = 'balance',
-    CashFlow = 'cash',
-}
-
-
 // NEW ARRAY-BASED SCHEMA - easier for AI to understand
 export const simpleHistoricalDataSchema = z.array(
     z.object({
@@ -74,7 +63,7 @@ export async function fetchMockFinancialData(
             [LineItem.DNA]: Math.round(baseRevenue * (0.05 + Math.random() * 0.03)), // 5-8% of revenue
             [LineItem.CAPEX]: Math.round(baseRevenue * (0.08 + Math.random() * 0.05)), // 8-13% of revenue
             [LineItem.Taxes]: Math.round(baseRevenue * 0.2 * (0.8 + Math.random() * 0.4)), // ~20% of profit with variance
-            [LineItem.CONWC]: Math.round(baseRevenue * (0.01 + Math.random() * 0.03) * (Math.random() > 0.5 ? 1 : -1)), // 1-4% of revenue, can be positive or negative
+            [LineItem.CONWC]: 0,
         };
     }
 
@@ -84,84 +73,6 @@ export async function fetchMockFinancialData(
         data: mockData,
         currency: 'USD',
     };
-}
-
-/**
- * Function to fetch data from Yahoo Finance API
- * Note: In a real implementation, you would need to use an API key and proper error handling
- */
-export async function fetchYahooFinancialData(
-    ticker: string,
-    years: number = 5,
-    statementType: FinancialStatementType = FinancialStatementType.IncomeStatement
-): Promise<FinancialDataResponse> {
-    try {
-        // This is a placeholder for real API implementation
-        // In a real scenario, you would:
-        // 1. Make an HTTP request to the Yahoo Finance API
-        // 2. Parse the response
-        // 3. Transform it to match our expected format
-
-        // For now, we'll just return mock data
-        return await fetchMockFinancialData(ticker, years);
-    } catch (error) {
-        return {
-            ticker,
-            companyName: ticker,
-            data: {},
-            currency: 'USD',
-            error: `Failed to fetch data from Yahoo Finance: ${error instanceof Error ? error.message : String(error)}`
-        };
-    }
-}
-
-/**
- * Function to fetch data from Alpha Vantage API
- * Note: In a real implementation, you would need to use an API key and proper error handling
- */
-export async function fetchAlphaVantageFinancialData(
-    ticker: string,
-    years: number = 5,
-    statementType: FinancialStatementType = FinancialStatementType.IncomeStatement
-): Promise<FinancialDataResponse> {
-    try {
-        // This is a placeholder for real API implementation
-        // In a real scenario, you would:
-        // 1. Make an HTTP request to the Alpha Vantage API with your API key
-        // 2. Parse the response
-        // 3. Transform it to match our expected format
-
-        // For now, we'll just return mock data
-        return await fetchMockFinancialData(ticker, years);
-    } catch (error) {
-        return {
-            ticker,
-            companyName: ticker,
-            data: {},
-            currency: 'USD',
-            error: `Failed to fetch data from Alpha Vantage: ${error instanceof Error ? error.message : String(error)}`
-        };
-    }
-}
-
-/**
- * Main function to fetch financial data from the specified source
- */
-export async function fetchFinancialData(
-    ticker: string,
-    years: number = 5,
-    source: FinancialDataSource = 'mock',
-    statementType: FinancialStatementType = FinancialStatementType.IncomeStatement
-): Promise<FinancialDataResponse> {
-    switch (source) {
-        case 'yahoo':
-            return fetchYahooFinancialData(ticker, years, statementType);
-        case 'alphavantage':
-            return fetchAlphaVantageFinancialData(ticker, years, statementType);
-        case 'mock':
-        default:
-            return fetchMockFinancialData(ticker, years);
-    }
 }
 
 // Map response data to our LineItem format for compatibility with DCF models
@@ -224,17 +135,11 @@ export const getHistoricalFinancialData = tool({
     parameters: z.object({
         ticker: z.string().describe('The stock ticker symbol of the company (e.g., AAPL, MSFT, GOOGL)'),
         years: z.number().optional().default(5).describe('Number of years of historical data to retrieve (default: 5)'),
-        statementType: z.nativeEnum(FinancialStatementType).optional().default(FinancialStatementType.IncomeStatement)
-            .describe('Type of financial statement to retrieve (default: income)'),
     }),
-    execute: async ({ ticker, years = 5, statementType = FinancialStatementType.IncomeStatement }) => {
+    execute: async ({ ticker, years = 5 }) => {
         try {
-            // Use mock data source by default
-            // In a production environment, we would choose the best source based on availability and data needs
-            const source: FinancialDataSource = 'mock';
-
-            // Fetch financial data from the specified source
-            const response = await fetchFinancialData(ticker, years, source, statementType);
+            // Always use mock data
+            const response = await fetchMockFinancialData(ticker, years);
 
             // If there was an error fetching the data, return the error
             if (response.error) {
