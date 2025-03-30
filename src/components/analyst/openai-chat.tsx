@@ -59,10 +59,9 @@ const UserMessage = ({ content }: { content: string }) => (
 const EmptyState = () => (
     <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md space-y-4">
-            <h3 className="text-xl font-semibold">Welcome to OpenAI Investment Analyst</h3>
+            <h3 className="text-xl font-semibold">Welcome to Midori</h3>
             <p className="text-muted-foreground">
-                Get insights on stocks, market trends, and investment strategies.
-                Ask me anything about financial markets.
+                Your AI-powered equity research assistant.
             </p>
         </div>
     </div>
