@@ -87,7 +87,7 @@ export function createDCFCells(
     for (let i = -historicalYears; i <= futureYears; i++) {
         const colIndex = i + historicalYears + 1; // Column index (0 is for row headers)
         const year = currentYear + i;
-        const isHistorical = i <= 0;
+        const isHistorical = year < currentYear;
         const suffix = isHistorical ? 'A' : 'E';
 
         // Add year headers
@@ -382,7 +382,7 @@ export function createDCFCells(
  * This is the original function that uses the more focused createDCFCells
  */
 export function generateSampleDCF(ticker: string, params: DCFParameters) {
-    const currentYear = 2024;
+    const currentYear = new Date().getFullYear();
     const historicalYears = 8;  // Used only for historicalData generation
     const futureYears = 10;     // +10 years from current
 
