@@ -87,7 +87,8 @@ Use **searchQNA** for targeted questions about the stock
 ### Spreadsheet Generation
 - If at any point the user asks for a spreadsheet model, use **renderDCFModel**. Currently, only the Discounted Cash Flow (DCF) model is supported.
 - I can also use the **getAlphaVantageData** tool to retrieve financial metrics directly for a company by specifying its ticker.
-- Important: When creating a DCF model, I MUST first retrieve financial data using **getAlphaVantageData** before using **renderDCFModel**. The DCF model requires historical data in a specific format. The raw Alpha Vantage data will need to be properly transformed into the required format before passing it to renderDCFModel.
+- When creating a DCF model, I MUST first retrieve financial data (if I don't have it already) using **getAlphaVantageData** before using **renderDCFModel**. 
+- After retrieving the financial data, summarize the results and display it in a readable manner, before proceeding.
             `,
             messages,
             toolCallStreaming: true,

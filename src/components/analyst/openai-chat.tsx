@@ -16,7 +16,7 @@ import { SpreadSheet } from '../spreadsheet/sheet';
 import { createDCFCells } from '../spreadsheet/dcf';
 import { LineItem } from '../spreadsheet/types';
 import { HistoricalData } from '../spreadsheet/types';
-import { financialDataMap } from '../spreadsheet/mockData';
+import remarkGfm from 'remark-gfm';
 
 // Type definitions
 type Source = {
@@ -466,12 +466,13 @@ const AssistantMessage = ({
         .map(part => part.source!) || [];
 
     return (
-        <div className="prose prose-sm dark:prose-invert max-w-none">
+        <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto">
             {message.parts.map((part, index) => {
                 switch (part.type) {
                     case 'text':
                         return (
                             <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
                                 key={index}
                                 components={{
                                     // Configure links to open in new tabs
