@@ -161,9 +161,97 @@ export const getHistoricalFinancialData = tool({
     },
 });
 
+// Function to fetch data from Alpha Vantage API
+export async function fetchAlphaVantageData(
+    ticker: string,
+    years: number = 5
+): Promise<any> {
+    try {
+        const apiKey = process.env.AV_API_KEY || "demo";
+        if (!apiKey) {
+            throw new Error('Alpha Vantage API key not found in environment variables');
+        }
+
+        // Define the endpoints we want to fetch
+        const endpoints = [
+            {
+                function: "INCOME_STATEMENT",
+                key: "incomeStatement"
+            },
+            {
+                function: "BALANCE_SHEET",
+                key: "balanceSheet"
+            },
+            {
+                function: "CASH_FLOW",
+                key: "cashFlow"
+            }
+        ];
+
+        // Create an object to hold all the data with an index signature
+        const combinedData: {
+            symbol: string;
+            lastUpdated: string;
+            [key: string]: any;
+        } = {
+            symbol: ticker,
+            lastUpdated: new Date().toISOString(),
+        };
+
+        // Fetch data from all endpoints
+        for (const endpoint of endpoints) {
+            const url = `https://www.alphavantage.co/query?function=${endpoint.function}&symbol=${ticker}&apikey=${apiKey}`;
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`Alpha Vantage API returned ${response.status}: ${response.statusText} for ${endpoint.function}`);
+            }
+
+            const data = await response.json();
+
+            // Check if we have annual reports and limit them to the requested years
+            if (data && data.annualReports && Array.isArray(data.annualReports) && data.annualReports.length > 0) {
+                data.annualReports = data.annualReports.slice(0, years);
+            }
+
+            // Add this data to our combined response using the endpoint key
+            combinedData[endpoint.key] = data;
+        }
+
+        return combinedData;
+    } catch (error) {
+        return {
+            error: `Failed to fetch data from Alpha Vantage: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+
+// Create and export the tool for retrieving data directly from Alpha Vantage
+export const getAlphaVantageData = tool({
+    description: 'Retrieve financial data directly from Alpha Vantage API for a given company ticker. Returns raw Alpha Vantage data.',
+    parameters: z.object({
+        ticker: z.string().describe('The stock ticker symbol of the company (e.g., AAPL, MSFT, GOOGL)'),
+        years: z.number().optional().default(5).describe('Number of years of historical data to retrieve (default: 5)'),
+    }),
+    execute: async ({ ticker, years = 5 }) => {
+        try {
+            const response = await fetchAlphaVantageData(ticker, years);
+
+            // Return the raw Alpha Vantage response without processing
+            return response;
+        } catch (error) {
+            return {
+                error: `Failed to retrieve Alpha Vantage data: ${error instanceof Error ? error.message : String(error)}`
+            };
+        }
+    },
+});
+
 // Export a collection of financial tools
-export const financialTools = (): { getHistoricalFinancialData: Tool } => {
+export const financialTools = (): { getHistoricalFinancialData: Tool, getAlphaVantageData: Tool } => {
     return {
         getHistoricalFinancialData,
+        getAlphaVantageData,
     };
 }; 
