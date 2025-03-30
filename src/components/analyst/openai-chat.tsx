@@ -231,7 +231,6 @@ const ToolInvocationRenderer = ({
     toolInvocation,
 }: ToolInvocationProps) => {
     const { toolName, state, args } = toolInvocation;
-    console.log(toolInvocation.args)
 
     // Handle each tool with its loading and result states in the same case
     switch (toolName) {
@@ -577,69 +576,50 @@ export function OpenAIChat() {
                     }
                 case 'renderDCFModel':
                     try {
-                        const args = toolCall.args as { dcfParameters: any, historicalData?: Record<string, Record<string, number>> };
+                        // Debug log full arguments object
+                        console.log("DCF Model Arguments:", JSON.stringify(toolCall.args));
 
-                        // Use provided historicalData or use mock data
-                        const currentYear = 2024;
-                        let historicalData: HistoricalData = {};
+                        // Update type definition to match new array-based schema and make historicalData required
+                        const args = toolCall.args as {
+                            dcfParameters: any,
+                            historicalData: Array<{
+                                year: number;
+                                revenue: number;
+                                cogs: number;
+                                "SG&A": number;
+                                "D&A": number;
+                                CAPEX: number;
+                                Taxes: number;
+                                CONWC: number;
+                            }>
+                        };
 
-                        if (args.historicalData) {
-                            // Map API-provided historical data to LineItem enum
-                            historicalData = Object.entries(args.historicalData).reduce((acc, [year, yearData]) => {
-                                const yearNumber = parseInt(year);
-                                // Convert string keys to LineItem enum values
-                                acc[yearNumber] = {
-                                    [LineItem.Revenue]: yearData.Revenue || yearData.revenue || 0,
-                                    [LineItem.COGS]: yearData.COGS || yearData.cogs || 0,
-                                    [LineItem.SGNA]: yearData.SGNA || yearData.sgna || yearData.SGA || yearData.sga || 0,
-                                    [LineItem.DNA]: yearData.DNA || yearData.dna || yearData.DA || yearData.da || 0,
-                                    [LineItem.CAPEX]: yearData.CAPEX || yearData.capex || yearData.CapEx || 0,
-                                    [LineItem.Taxes]: yearData.Taxes || yearData.taxes || 0,
-                                    [LineItem.CONWC]: yearData.CONWC || yearData.conwc || yearData.NWC || yearData.nwc || 0
-                                };
-                                return acc;
-                            }, {} as HistoricalData);
-                        } else {
-                            // Use McDonald's historical data from mock dataset instead of generating random data
-                            console.warn("No historical data provided for DCF model, using McDonald's (MCD) historical data");
-
-                            const mcdData = financialDataMap.get("MCD");
-                            if (mcdData) {
-                                // Convert Map to HistoricalData format
-                                mcdData.forEach((yearData, year) => {
-                                    historicalData[year] = {
-                                        [LineItem.Revenue]: yearData[LineItem.Revenue],
-                                        [LineItem.COGS]: yearData[LineItem.COGS],
-                                        [LineItem.SGNA]: yearData[LineItem.SGNA],
-                                        [LineItem.DNA]: yearData[LineItem.DNA],
-                                        [LineItem.CAPEX]: yearData[LineItem.CAPEX],
-                                        [LineItem.Taxes]: yearData[LineItem.Taxes],
-                                        [LineItem.CONWC]: yearData[LineItem.CONWC],
-                                    };
-                                });
-                            } else {
-                                // Fall back to generated data if McDonald's data is not available (shouldn't happen)
-                                for (let year = currentYear - 5; year <= currentYear; year++) {
-                                    historicalData[year] = {
-                                        [LineItem.Revenue]: 100 * (1 + (year - (currentYear - 5)) * 0.1),
-                                        [LineItem.COGS]: 60 * (1 + (year - (currentYear - 5)) * 0.1),
-                                        [LineItem.SGNA]: 20 * (1 + (year - (currentYear - 5)) * 0.1),
-                                        [LineItem.DNA]: 5 * (1 + (year - (currentYear - 5)) * 0.1),
-                                        [LineItem.CAPEX]: 10 * (1 + (year - (currentYear - 5)) * 0.1),
-                                        [LineItem.Taxes]: 5 * (1 + (year - (currentYear - 5)) * 0.1),
-                                        [LineItem.CONWC]: 2 * (1 + (year - (currentYear - 5)) * 0.1)
-                                    };
-                                }
-                            }
-
-                            // Notify user that we're using McDonald's data
-                            toast.warning("Using McDonald's (MCD) historical data for the DCF model. Specify a ticker or provide custom historical data for more accurate results.");
+                        // Check if historicalData exists and throw an error if missing
+                        if (!args.historicalData || !Array.isArray(args.historicalData) || args.historicalData.length === 0) {
+                            console.error("Missing or invalid historicalData in args:", args);
+                            throw new Error("Historical data is required for DCF model creation and must be a non-empty array");
                         }
 
+                        // Convert the array-based format to the record format expected by createDCFCells
+                        const historicalDataForDCF: HistoricalData = {};
+
+                        args.historicalData.forEach(yearData => {
+                            historicalDataForDCF[yearData.year] = {
+                                [LineItem.Revenue]: yearData.revenue,
+                                [LineItem.COGS]: yearData.cogs,
+                                [LineItem.SGNA]: yearData["SG&A"],
+                                [LineItem.DNA]: yearData["D&A"],
+                                [LineItem.CAPEX]: yearData.CAPEX,
+                                [LineItem.Taxes]: yearData.Taxes,
+                                [LineItem.CONWC]: yearData.CONWC
+                            };
+                        });
+
+                        const currentYear = new Date().getFullYear();
                         const cells = createDCFCells(
                             10, // futureYears
                             currentYear,
-                            historicalData,
+                            historicalDataForDCF,
                             args.dcfParameters
                         );
                         setSpreadsheetCells(cells);

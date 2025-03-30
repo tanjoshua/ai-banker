@@ -1,9 +1,9 @@
 import { streamText, tool } from "ai";
 import { z } from "zod";
-import { dcfParametersSchema, renderSpreadsheetCell, historicalDataSchema } from "@/components/spreadsheet/types";
+import { dcfParametersSchema, renderSpreadsheetCell } from "@/components/spreadsheet/types";
 import { openai } from "@ai-sdk/openai";
-import { dcfExample } from "@/components/spreadsheet/templates/dcf";
 import { tavilyTools } from "@/lib/tools/tavily";
+import { financialTools, simpleHistoricalDataSchema } from "@/lib/tools/financial/historicalData";
 export const maxDuration = 60; // Increase to 60 seconds for complex operations
 
 // Force dynamic to ensure we don't get static rendering issues
@@ -86,6 +86,8 @@ Use **searchQNA** for targeted questions about the stock
 
 ### Spreadsheet Generation
 - If at any point the user asks for a spreadsheet model, use **renderDCFModel**. Currently, only the Discounted Cash Flow (DCF) model is supported.
+- I can also use the **getHistoricalFinancialData** tool to retrieve historical financial metrics directly for a company by specifying its ticker.
+- Important: When creating a DCF model, I MUST first retrieve historical financial data using **getHistoricalFinancialData** before using **renderDCFModel**. The DCF model requires historical data.
             `,
             messages,
             toolCallStreaming: true,
@@ -96,25 +98,14 @@ Use **searchQNA** for targeted questions about the stock
                         description: "A tool to render a Discounted Cash Flow (DCF) model based on growth parameters and historical financial data",
                         parameters: z.object({
                             dcfParameters: dcfParametersSchema,
-                            historicalData: historicalDataSchema.optional()
+                            historicalData: simpleHistoricalDataSchema
                         })
                     }
                 ),
                 ...tavilyTools({ apiKey: process.env.TAVILY_API_KEY! }, {
                     excludeTools: [],
                 }),
-                // getSpreadsheetTemplate: tool({
-                //     description: "A tool to get the spreadsheet template",
-                //     parameters: z.object({
-                //         type: z.enum(['dcf'])
-                //     }),
-                //     execute: async ({ type }) => {
-                //         if (type === 'dcf') {
-                //             return dcfExample;
-                //         }
-                //         // can add other templates next time, or even let the user choose the template
-                //     }
-                // }),
+                ...financialTools(),
                 renderSpreadsheet: tool({
                     description: "A tool to render a simple spreadsheet. Only use for small spreadsheets.",
                     parameters: z.object({
