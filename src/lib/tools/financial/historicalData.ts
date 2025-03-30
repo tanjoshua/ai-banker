@@ -257,9 +257,8 @@ export const getAlphaVantageData = tool({
 });
 
 // Export a collection of financial tools
-export const financialTools = (): { getHistoricalFinancialData: Tool, getAlphaVantageData: Tool } => {
+export const financialTools = (): { getAlphaVantageData: Tool } => {
     return {
-        getHistoricalFinancialData,
         getAlphaVantageData,
     };
 }; 
