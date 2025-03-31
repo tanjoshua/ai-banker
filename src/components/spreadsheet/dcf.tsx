@@ -1,7 +1,7 @@
 'use client';
 import { cn } from "@/lib/utils";
 import { SpreadSheet, getCoordinates } from "./sheet";
-import { getHardcodedData, FinancialStatementData } from "./mockData";
+import { getHardcodedData } from "./mockData";
 import { Cell, CellFormat, DCFParameters, HistoricalData, LineItem } from "./types";
 import { useState } from "react";
 
