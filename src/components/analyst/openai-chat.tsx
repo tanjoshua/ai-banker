@@ -17,6 +17,7 @@ import { createDCFCells } from '../spreadsheet/dcf';
 import { LineItem } from '../spreadsheet/types';
 import { HistoricalData } from '../spreadsheet/types';
 import remarkGfm from 'remark-gfm';
+import Image from 'next/image';
 
 // Type definitions
 type Source = {
@@ -296,7 +297,7 @@ const ToolInvocationRenderer = ({
                                                 rel="noopener noreferrer"
                                                 className="hover:opacity-90"
                                             >
-                                                <img
+                                                <Image
                                                     src={image.url}
                                                     alt={image.description || 'Search result image'}
                                                     className="w-full h-auto rounded-md"
