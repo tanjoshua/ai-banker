@@ -4,12 +4,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { Send, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { ToolInvocation, UIMessage } from 'ai';
 import { toast } from 'sonner';
-import { Cell, RenderSpreadsheetCell } from '../spreadsheet/types';
+import { Cell, DCFParameters, RenderSpreadsheetCell } from '../spreadsheet/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resizable';
 import { motion, AnimatePresence } from "motion/react";
 import { SpreadSheet } from '../spreadsheet/sheet';
@@ -18,6 +18,11 @@ import { LineItem } from '../spreadsheet/types';
 import { HistoricalData } from '../spreadsheet/types';
 import remarkGfm from 'remark-gfm';
 import Image from 'next/image';
+import {
+    TavilySearchResult,
+    TavilySearchResponse,
+    TavilyExtractResponse
+} from '@/lib/tools/tavily';
 
 // Type definitions
 type Source = {
@@ -25,6 +30,12 @@ type Source = {
     url: string;
     title?: string;
 };
+
+// Define a more precise type for search sources based on Tavily results
+type SearchSource = TavilySearchResult;
+
+// Define the SearchResult interface
+type SearchResult = TavilySearchResult;
 
 // SourcesList component (external)
 const SourcesList = ({ sources }: { sources: Source[] }) => {
@@ -170,7 +181,7 @@ const SourceLink = ({
 );
 
 // Search results component
-const SearchResults = ({ results }: { results: any[] }) => (
+const SearchResults = ({ results }: { results: SearchResult[] }) => (
     <div>
         <p className="text-xs text-muted-foreground mb-2">Search Results:</p>
         <div className="space-y-2">
@@ -199,7 +210,7 @@ const ToolSourcesList = ({
     title = "Sources:",
     prefix = ""
 }: {
-    results: any[];
+    results: SearchSource[];
     title?: string;
     prefix?: string;
 }) => (
@@ -216,14 +227,6 @@ const ToolSourcesList = ({
                 />
             ))}
         </div>
-    </div>
-);
-
-// AI Answer component for displaying answers
-const AIAnswer = ({ answer }: { answer: string }) => (
-    <div className="mb-3 p-2 bg-muted/50 rounded-md">
-        <p className="text-sm font-medium">AI Answer:</p>
-        <p className="text-sm">{answer}</p>
     </div>
 );
 
@@ -278,18 +281,18 @@ const ToolInvocationRenderer = ({
                 const query = args?.query || "";
                 return <ToolLoadingState message={`Searching the web for: "${query}"...`} />;
             } else if (state === "result") {
-                const result = toolInvocation.result as any;
+                const result = toolInvocation.result as TavilySearchResponse;
                 return (
                     <ToolResultContainer successMessage="Web search completed">
-                        {result.results?.length > 0 && (
+                        {result.results && result.results.length > 0 && (
                             <SearchResults results={result.results} />
                         )}
 
-                        {result.images?.length > 0 && (
+                        {result.images && result.images.length > 0 && (
                             <div className="mt-3">
                                 <p className="text-xs text-muted-foreground mb-2">Images:</p>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {result.images.map((image: any, index: number) => (
+                                    {result.images.map((image, index) => (
                                         <div key={`image-${index}`} className="text-xs">
                                             <a
                                                 href={image.url}
@@ -336,31 +339,12 @@ const ToolInvocationRenderer = ({
                 const query = args?.query || "";
                 return <ToolLoadingState message={`Finding an answer to: "${query}"...`} />;
             } else if (state === "result") {
-                const result = toolInvocation.result as any;
+                const result = toolInvocation.result as string;
                 const query = args?.query || "";
-
-                if (typeof result === 'string') {
-                    return (
-                        <ToolResultContainer successMessage={`Answer found for: "${query}"`}>
-                            <p className="text-sm">{result}</p>
-                        </ToolResultContainer>
-                    );
-                }
 
                 return (
                     <ToolResultContainer successMessage={`Answer found for: "${query}"`}>
-                        {result.answer && (
-                            <div className="mb-2 p-2 bg-muted/50 rounded-md">
-                                <p className="text-sm">{result.answer}</p>
-                            </div>
-                        )}
-
-                        {result.results?.length > 0 && (
-                            <ToolSourcesList
-                                results={result.results}
-                                prefix="qna-"
-                            />
-                        )}
+                        <p className="text-sm">{result}</p>
                     </ToolResultContainer>
                 );
             }
@@ -405,7 +389,7 @@ const ToolInvocationRenderer = ({
                     </div>
                 );
             } else if (state === "result") {
-                const result = toolInvocation.result as any;
+                const result = toolInvocation.result as TavilyExtractResponse;
                 const urls = args?.urls || [];
                 const urlCount = urls.length;
                 const extractMessage = urlCount === 1
@@ -417,9 +401,14 @@ const ToolInvocationRenderer = ({
                         successMessage={extractMessage}
                         error={result.error}
                     >
-                        {result.results?.length > 0 ? (
+                        {result.results && result.results.length > 0 ? (
                             <ToolSourcesList
-                                results={result.results.map((r: any) => ({ url: r.url })) || []}
+                                results={result.results.map((r) => ({
+                                    url: r.url,
+                                    title: new URL(r.url).hostname,
+                                    content: r.rawContent.substring(0, 100),
+                                    score: 0
+                                }))}
                                 title="Extracted from:"
                                 prefix="extract-"
                             />
@@ -476,7 +465,7 @@ const AssistantMessage = ({
                                 key={index}
                                 components={{
                                     // Configure links to open in new tabs
-                                    a: ({ node, ...props }) => (
+                                    a: ({ ...props }) => (
                                         <a
                                             {...props}
                                             target="_blank"
@@ -582,7 +571,7 @@ export function OpenAIChat() {
 
                         // Update type definition to match new array-based schema and make historicalData required
                         const args = toolCall.args as {
-                            dcfParameters: any,
+                            dcfParameters: DCFParameters,
                             historicalData: Array<{
                                 year: number;
                                 revenue: number;

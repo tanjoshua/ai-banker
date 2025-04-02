@@ -3,14 +3,14 @@ import { z } from 'zod'
 import { tavily } from '@tavily/core'
 import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf"
 
-type TavilyTools = 'search' | 'searchContext' | 'searchQNA' | 'extract'
+export type TavilyTools = 'search' | 'searchContext' | 'searchQNA' | 'extract'
 
-interface TavilyImage {
+export interface TavilyImage {
   url: string
   description?: string
 }
 
-interface TavilySearchResult {
+export interface TavilySearchResult {
   title: string
   url: string
   content: string
@@ -19,7 +19,7 @@ interface TavilySearchResult {
   publishedDate?: string
 }
 
-interface TavilySearchResponse {
+export interface TavilySearchResponse {
   query: string
   answer?: string
   images?: TavilyImage[]
@@ -28,14 +28,14 @@ interface TavilySearchResponse {
   error?: string // Added to handle errors
 }
 
-interface TavilyExtractResult {
+export interface TavilyExtractResult {
   url: string
   rawContent: string
   images?: string[]
   error?: string
 }
 
-interface TavilyExtractResponse {
+export interface TavilyExtractResponse {
   results: TavilyExtractResult[]
   error?: string
 }
@@ -257,7 +257,7 @@ export const tavilyTools = (
               console.log(`[EXTRACT] Processing non-PDF URLs with Tavily: ${nonPdfUrls.join(', ')}`);
               const response = await client.extract(nonPdfUrls, options);
               const tavilyResults = response.results.map((result) => {
-                console.log(`[EXTRACT] ✅ Successfully extracted content from ${result.url} (${result.rawContent.length} chars)`);
+                console.log(`[EXTRACT] Successfully extracted content from ${result.url} (${result.rawContent.length} chars)`);
                 return {
                   url: result.url,
                   rawContent: result.rawContent,
@@ -266,7 +266,7 @@ export const tavilyTools = (
               });
               results = [...results, ...tavilyResults];
             } catch (error) {
-              console.error(`[EXTRACT] ❌ Error extracting non-PDF content with Tavily: ${String(error)}`);
+              console.error(`[EXTRACT] Error extracting non-PDF content with Tavily: ${String(error)}`);
               errorMessage += `Error extracting non-PDF content with Tavily: ${String(error)}. `;
               // Add fallback placeholders for failed non-PDF URLs
               nonPdfUrls.forEach(url => {
@@ -299,7 +299,7 @@ export const tavilyTools = (
 
                 // Combine content from all pages
                 const pdfContent = docs.map((doc: { pageContent: string }) => doc.pageContent).join("\n\n");
-                console.log(`[EXTRACT] ✅ Successfully extracted content from PDF ${url} (${pdfContent.length} chars)`);
+                console.log(`[EXTRACT] Successfully extracted content from PDF ${url} (${pdfContent.length} chars)`);
 
                 results.push({
                   url,
@@ -307,7 +307,7 @@ export const tavilyTools = (
                   // Note: WebPDFLoader doesn't extract images natively
                 });
               } catch (pdfError) {
-                console.error(`[EXTRACT] ❌ Error processing PDF ${url}: ${String(pdfError)}`);
+                console.error(`[EXTRACT] Error processing PDF ${url}: ${String(pdfError)}`);
                 results.push({
                   url,
                   rawContent: `Failed to extract content from PDF: ${url}`,
