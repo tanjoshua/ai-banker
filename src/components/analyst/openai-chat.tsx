@@ -31,11 +31,6 @@ type Source = {
     title?: string;
 };
 
-// Define a more precise type for search sources based on Tavily results
-type SearchSource = TavilySearchResult;
-
-// Define the SearchResult interface
-type SearchResult = TavilySearchResult;
 
 // SourcesList component (external)
 const SourcesList = ({ sources }: { sources: Source[] }) => {
@@ -181,7 +176,7 @@ const SourceLink = ({
 );
 
 // Search results component
-const SearchResults = ({ results }: { results: SearchResult[] }) => (
+const SearchResults = ({ results }: { results: TavilySearchResult[] }) => (
     <div>
         <p className="text-xs text-muted-foreground mb-2">Search Results:</p>
         <div className="space-y-2">
@@ -210,7 +205,7 @@ const ToolSourcesList = ({
     title = "Sources:",
     prefix = ""
 }: {
-    results: SearchSource[];
+    results: TavilySearchResult[];
     title?: string;
     prefix?: string;
 }) => (
