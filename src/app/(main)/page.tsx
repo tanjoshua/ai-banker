@@ -11,15 +11,13 @@ export default function MainPage() {
           <div className="text-4xl font-bold">{"LOOK AT HIM. THAT'S MY QUANT."}</div>
           <Image src="/main/myquant.png" alt="My Quant" width={500} height={0} className="w-full h-auto rounded-xl" />
 
-          <Link href="/analyst">
+          <Link href="/analyst/openai">
             <Button>
               Begin &rarr;
             </Button>
           </Link>
         </div>
       </div>
-
-
     </>
   );
 }
